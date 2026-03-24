@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import fontkit from "@pdf-lib/fontkit";
@@ -7,11 +7,26 @@ import { PDFDocument, type PDFFont, type PDFPage, rgb } from "pdf-lib";
 import { apiError, requireAuthenticatedAdministrator } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { buildReportExportFileName } from "@/lib/report-export";
-import { buildReportWhere, serializeReport } from "@/lib/reports";
+import { buildReportWhere } from "@/lib/reports";
 
 export const runtime = "nodejs";
 
-type SerializedReport = ReturnType<typeof serializeReport>;
+type SerializedReport = {
+  workDate: string;
+  clientCode: string;
+  clientName: string;
+  workMinutes: number;
+  workCode: string;
+  customerStatus: "new" | "existing";
+  salesAmount: number;
+  points: number | null;
+  remarks: string | null;
+};
+
+type LoadedFontSource = {
+  bytes: Uint8Array;
+  subset: boolean;
+};
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
@@ -41,16 +56,36 @@ const TABLE_COLUMNS = [
   { label: "備考", x: 510, width: 42 },
 ] as const;
 
+const currencyFormatter = new Intl.NumberFormat("ja-JP", {
+  style: "currency",
+  currency: "JPY",
+  maximumFractionDigits: 0,
+});
+
+const numberFormatter = new Intl.NumberFormat("ja-JP");
+
+const PROJECT_FONT_PATH = path.join(
+  process.cwd(),
+  "node_modules",
+  "@fontsource",
+  "noto-sans-jp",
+  "files",
+  "noto-sans-jp-japanese-400-normal.woff",
+);
+
+const SYSTEM_FONT_CANDIDATES = [
+  process.env.PDF_FONT_PATH?.trim(),
+  "/System/Library/Fonts/Supplemental/AppleGothic.ttf",
+].filter((value): value is string => Boolean(value));
+
+let cachedJapaneseFontSourcePromise: Promise<LoadedFontSource> | null = null;
+
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat("ja-JP", {
-    style: "currency",
-    currency: "JPY",
-    maximumFractionDigits: 0,
-  }).format(value);
+  return currencyFormatter.format(value);
 }
 
 function formatNumber(value: number) {
-  return new Intl.NumberFormat("ja-JP").format(value);
+  return numberFormatter.format(value);
 }
 
 function clipText(text: string, maxWidth: number, font: PDFFont, size: number) {
@@ -60,13 +95,24 @@ function clipText(text: string, maxWidth: number, font: PDFFont, size: number) {
     return text;
   }
 
-  let clipped = text;
+  let low = 0;
+  let high = text.length;
+  let bestLength = 0;
 
-  while (clipped.length > 0 && font.widthOfTextAtSize(`${clipped}${ellipsis}`, size) > maxWidth) {
-    clipped = clipped.slice(0, -1);
+  while (low <= high) {
+    const middle = Math.floor((low + high) / 2);
+    const candidate = `${text.slice(0, middle)}${ellipsis}`;
+
+    if (font.widthOfTextAtSize(candidate, size) <= maxWidth) {
+      bestLength = middle;
+      low = middle + 1;
+      continue;
+    }
+
+    high = middle - 1;
   }
 
-  return `${clipped}${ellipsis}`;
+  return `${text.slice(0, bestLength)}${ellipsis}`;
 }
 
 function buildFilterLines(searchParams: URLSearchParams) {
@@ -249,17 +295,61 @@ function createReportPage(pdfDocument: PDFDocument, font: PDFFont, administrator
   return page;
 }
 
-async function loadJapaneseFont() {
-  const fontPath = path.join(
-    process.cwd(),
-    "node_modules",
-    "@fontsource",
-    "noto-sans-jp",
-    "files",
-    "noto-sans-jp-japanese-400-normal.woff",
-  );
+function serializePdfReport(report: {
+  workDate: Date;
+  clientCode: string;
+  clientName: string;
+  workMinutes: number;
+  workCode: string;
+  customerStatus: "new" | "existing";
+  salesAmount: { toString(): string } | number;
+  points: { toString(): string } | number | null;
+  remarks: string | null;
+}): SerializedReport {
+  return {
+    workDate: report.workDate.toISOString().slice(0, 10),
+    clientCode: report.clientCode,
+    clientName: report.clientName,
+    workMinutes: report.workMinutes,
+    workCode: report.workCode,
+    customerStatus: report.customerStatus,
+    salesAmount: Number(report.salesAmount),
+    points: report.points === null ? null : Number(report.points),
+    remarks: report.remarks,
+  };
+}
 
-  return readFile(fontPath);
+async function canAccessFile(filePath: string) {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function loadJapaneseFontSource(): Promise<LoadedFontSource> {
+  for (const fontPath of SYSTEM_FONT_CANDIDATES) {
+    if ((fontPath.endsWith(".ttf") || fontPath.endsWith(".otf") || fontPath.endsWith(".woff")) && (await canAccessFile(fontPath))) {
+      return {
+        bytes: await readFile(fontPath),
+        subset: true,
+      };
+    }
+  }
+
+  return {
+    bytes: await readFile(PROJECT_FONT_PATH),
+    subset: true,
+  };
+}
+
+async function getJapaneseFontSource() {
+  if (!cachedJapaneseFontSourcePromise) {
+    cachedJapaneseFontSourcePromise = loadJapaneseFontSource();
+  }
+
+  return cachedJapaneseFontSourcePromise;
 }
 
 export async function GET(request: Request) {
@@ -283,6 +373,17 @@ export async function GET(request: Request) {
   const [reports, summary] = await prisma.$transaction([
     prisma.dailyWorkReport.findMany({
       where,
+      select: {
+        workDate: true,
+        clientCode: true,
+        clientName: true,
+        workMinutes: true,
+        workCode: true,
+        customerStatus: true,
+        salesAmount: true,
+        points: true,
+        remarks: true,
+      },
       orderBy: [{ workDate: "desc" }, { createdAt: "desc" }],
     }),
     prisma.dailyWorkReport.aggregate({
@@ -300,11 +401,11 @@ export async function GET(request: Request) {
     }),
   ]);
 
-  const serializedReports = reports.map(serializeReport);
+  const serializedReports = reports.map(serializePdfReport);
   const pdfDocument = await PDFDocument.create();
   pdfDocument.registerFontkit(fontkit);
-  const fontBytes = await loadJapaneseFont();
-  const regularFont = await pdfDocument.embedFont(fontBytes);
+  const fontSource = await getJapaneseFontSource();
+  const regularFont = await pdfDocument.embedFont(fontSource.bytes, { subset: fontSource.subset });
   let page = createReportPage(pdfDocument, regularFont, administrator);
   let y = PAGE_HEIGHT - 152;
 

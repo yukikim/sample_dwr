@@ -178,6 +178,10 @@ function formatCustomerStatus(value: string) {
   return value;
 }
 
+function formatOptionalNumber(value: number | null) {
+  return value === null ? "-" : String(value);
+}
+
 export function ReportsPageClient({ administrator }: { administrator: AuthenticatedAdministrator }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -392,7 +396,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
           </div>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
           <article className="rounded-[1.75rem] border border-white/60 bg-white/85 p-5 shadow-[0_14px_40px_rgba(76,47,33,0.08)]">
             <p className="text-sm text-(--ink-muted)">件数</p>
             <p className="mt-3 text-3xl font-semibold">{summary.count}</p>
@@ -404,6 +408,22 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
           <article className="rounded-[1.75rem] border border-white/60 bg-white/85 p-5 shadow-[0_14px_40px_rgba(76,47,33,0.08)]">
             <p className="text-sm text-(--ink-muted)">作業分合計</p>
             <p className="mt-3 text-3xl font-semibold">{summary.workMinutesTotal}</p>
+          </article>
+          <article className="rounded-[1.75rem] border border-white/60 bg-white/85 p-5 shadow-[0_14px_40px_rgba(76,47,33,0.08)]">
+            <p className="text-sm text-(--ink-muted)">工数分合計</p>
+            <p className="mt-3 text-3xl font-semibold">{summary.laborMinutesTotal}</p>
+          </article>
+          <article className="rounded-[1.75rem] border border-white/60 bg-white/85 p-5 shadow-[0_14px_40px_rgba(76,47,33,0.08)]">
+            <p className="text-sm text-(--ink-muted)">移動分合計</p>
+            <p className="mt-3 text-3xl font-semibold">{summary.travelMinutesTotal}</p>
+          </article>
+          <article className="rounded-[1.75rem] border border-white/60 bg-white/85 p-5 shadow-[0_14px_40px_rgba(76,47,33,0.08)]">
+            <p className="text-sm text-(--ink-muted)">台数合計</p>
+            <p className="mt-3 text-3xl font-semibold">{summary.unitCountTotal}</p>
+          </article>
+          <article className="rounded-[1.75rem] border border-white/60 bg-white/85 p-5 shadow-[0_14px_40px_rgba(76,47,33,0.08)]">
+            <p className="text-sm text-(--ink-muted)">基準分合計</p>
+            <p className="mt-3 text-3xl font-semibold">{summary.standardMinutesTotal}</p>
           </article>
           <article className="rounded-[1.75rem] border border-white/60 bg-white/85 p-5 shadow-[0_14px_40px_rgba(76,47,33,0.08)]">
             <p className="text-sm text-(--ink-muted)">ポイント合計</p>
@@ -569,6 +589,10 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                   <th className="px-4 py-2">状態</th>
                   <th className="px-4 py-2">売上</th>
                   <th className="px-4 py-2">作業分</th>
+                  <th className="px-4 py-2">工数分</th>
+                  <th className="px-4 py-2">移動分</th>
+                  <th className="px-4 py-2">台数</th>
+                  <th className="px-4 py-2">基準分</th>
                   <th className="px-4 py-2">備考</th>
                   <th className="px-4 py-2">操作</th>
                 </tr>
@@ -576,7 +600,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="rounded-3xl border border-dashed border-black/10 px-4 py-10 text-center text-sm text-(--ink-soft)">
+                    <td colSpan={12} className="rounded-3xl border border-dashed border-black/10 px-4 py-10 text-center text-sm text-(--ink-soft)">
                       {isFetching ? "日報データを読み込んでいます..." : "条件に一致する日報はありません。"}
                     </td>
                   </tr>
@@ -592,6 +616,10 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                       <td className="px-4 py-4 text-sm">{formatCustomerStatus(item.customerStatus)}</td>
                       <td className="px-4 py-4 text-sm">{formatCurrency(item.salesAmount)}</td>
                       <td className="px-4 py-4 text-sm">{item.workMinutes}</td>
+                      <td className="px-4 py-4 text-sm">{item.laborMinutes}</td>
+                      <td className="px-4 py-4 text-sm">{item.travelMinutes}</td>
+                      <td className="px-4 py-4 text-sm">{item.unitCount}</td>
+                      <td className="px-4 py-4 text-sm">{formatOptionalNumber(item.standardMinutes)}</td>
                       <td className="px-4 py-4 text-sm text-(--ink-soft)">{item.remarks ?? "-"}</td>
                       <td className="rounded-r-3xl px-4 py-4 text-sm">
                         <div className="flex flex-wrap gap-2">
