@@ -16,8 +16,7 @@
 - 日報一覧の検索条件 URL クエリ同期
 - 条件付き CSV 出力
 - 条件付き PDF 出力
-- 管理者追加画面
-- 管理者一覧表示
+- 管理者追加、編集、有効/無効切替
 - ダッシュボードでの実データサマリー表示
 
 ### 0.2 部分実装
@@ -28,7 +27,7 @@
 
 ### 0.3 未実装
 
-- 管理者の編集、削除、無効化
+- 管理者の削除
 - 日報詳細専用画面
 - 監査ログ
 - テストコード
@@ -41,7 +40,7 @@
 - 日報一覧: [app/reports/page.tsx](app/reports/page.tsx)
 - 日報登録: [app/reports/new/page.tsx](app/reports/new/page.tsx)
 - 日報編集: [app/reports/[id]/edit/page.tsx](app/reports/[id]/edit/page.tsx)
-- 管理者追加・一覧: [app/administrators/page.tsx](app/administrators/page.tsx)
+- 管理者追加・編集・有効/無効: [app/administrators/page.tsx](app/administrators/page.tsx)
 
 ### 0.5 実装済み API
 
@@ -57,6 +56,7 @@
 	- [app/api/reports/export.pdf/route.ts](app/api/reports/export.pdf/route.ts)
 - 管理者 API
 	- [app/api/administrators/route.ts](app/api/administrators/route.ts)
+	- [app/api/administrators/[id]/route.ts](app/api/administrators/[id]/route.ts)
 
 ## 1. プロジェクト概要
 
@@ -76,7 +76,7 @@
 - 集計結果を PDF としてダウンロードできること
 - 管理者のみがアプリを利用できること
 - 初期管理者を環境設定で投入できること
-- ログイン済み管理者が別の管理者を追加できること
+- ログイン済み管理者が別の管理者を追加、編集、無効化できること
 
 ### 2.2 機能要件
 
@@ -110,7 +110,9 @@
 #### 管理者管理機能
 
 - ログイン済み管理者が新規管理者を作成できること
-- 管理者一覧の参照可否は実装時に判断するが、少なくとも追加機能は提供すること
+- 管理者一覧を参照できること
+- ログイン済み管理者が管理者情報を編集できること
+- ログイン済み管理者が管理者アカウントを無効化できること
 
 ### 2.3 非機能要件
 
@@ -989,7 +991,9 @@ GET /api/reports/summary のレスポンス例:
 | 機能 | Method | Path | 説明 |
 | --- | --- | --- | --- |
 | 管理者追加 | POST | /api/administrators | 新規管理者を追加 |
-| 管理者一覧 | GET | /api/administrators | 将来的な一覧取得 |
+| 管理者一覧 | GET | /api/administrators | 管理者一覧を取得 |
+| 管理者更新 | PATCH | /api/administrators/:id | 名前、メールアドレス、パスワードを更新 |
+| 管理者有効/無効 | PATCH | /api/administrators/:id | isActive を切り替えてログイン可否を制御 |
 
 POST /api/administrators のリクエスト例:
 
@@ -1007,6 +1011,8 @@ POST /api/administrators のリクエスト例:
 - password は最低文字数を設ける
 - name は空文字不可とする
 - 登録時に password を bcrypt でハッシュ化する
+- 最後の有効管理者は無効化できない
+- ログイン中の管理者自身は無効化できない
 
 #### 実装優先順
 
@@ -1019,10 +1025,11 @@ POST /api/administrators のリクエスト例:
 7. PDF 出力 API
 8. CSV 出力 API
 9. 管理者追加 API
+10. 管理者更新・無効化 API
 
 ## 6. 今後の実装検討事項
 
-- 管理者一覧、編集、無効化機能の追加要否
+- 管理者削除機能の要否
 - 検索条件保存機能の要否
 - PDF レイアウト詳細
 - CSV 列構成や外部連携要件の追加要否

@@ -9,7 +9,7 @@
 - 日報データの登録、検索、集計を主用途とするため、検索条件と集計条件を意識したインデックス設計を行う
 - 認証対象は管理者のみとし、パスワードはハッシュ値のみ保存する
 - 監査性と保守性を考慮し、主要テーブルには作成日時と更新日時を持たせる
-- 論理削除が必要になった場合に拡張しやすい設計とするが、初期実装では物理削除を前提とする
+- 管理者アカウントは運用上の停止に対応するため、有効/無効フラグで制御する
 
 ## 2. ER概要
 
@@ -43,6 +43,7 @@
 | name | varchar(100) | NOT NULL | なし |  | 管理者名 |
 | email | varchar(255) | NOT NULL | なし | UNIQUE | ログイン用メールアドレス |
 | password_hash | varchar(255) | NOT NULL | なし |  | ハッシュ化済みパスワード |
+| is_active | boolean | NOT NULL | true |  | ログイン可否を制御する有効フラグ |
 | created_at | timestamptz | NOT NULL | now() |  | 作成日時 |
 | updated_at | timestamptz | NOT NULL | now() |  | 更新日時 |
 
@@ -52,6 +53,7 @@
 - unique key: email
 - email はアプリケーション側で正規化した上で保存する
 - password_hash には平文を保存しない
+- is_active = false の管理者はログイン不可とする
 
 ### 4.2 daily_work_reports
 
@@ -134,6 +136,7 @@ create table administrators (
   name varchar(100) not null,
   email varchar(255) not null unique,
   password_hash varchar(255) not null,
+  is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

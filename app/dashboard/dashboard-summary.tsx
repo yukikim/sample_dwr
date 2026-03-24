@@ -27,6 +27,7 @@ type AdministratorsResponse = {
       id: string;
       name: string;
       email: string;
+      isActive: boolean;
       createdAt: string;
       updatedAt: string;
     }>;
@@ -41,14 +42,14 @@ type DashboardStats = {
   reportCount: number;
   salesAmountTotal: number;
   pointsTotal: number;
-  administratorCount: number;
+  activeAdministratorCount: number;
 };
 
 const initialStats: DashboardStats = {
   reportCount: 0,
   salesAmountTotal: 0,
   pointsTotal: 0,
-  administratorCount: 0,
+  activeAdministratorCount: 0,
 };
 
 function formatCurrency(value: number) {
@@ -105,7 +106,7 @@ export function DashboardSummary() {
         reportCount: summaryJson.data.count,
         salesAmountTotal: summaryJson.data.salesAmountTotal,
         pointsTotal: summaryJson.data.pointsTotal,
-        administratorCount: administratorsJson.data.items.length,
+        activeAdministratorCount: administratorsJson.data.items.filter((item) => item.isActive).length,
       });
       setIsLoading(false);
     }
@@ -153,11 +154,11 @@ export function DashboardSummary() {
         </article>
 
         <article className="rounded-[1.75rem] border border-white/60 bg-white/85 p-6 shadow-[0_14px_40px_rgba(76,47,33,0.08)]">
-          <p className="text-sm text-(--ink-muted)">管理者数 / ポイント</p>
+          <p className="text-sm text-(--ink-muted)">有効管理者数 / ポイント</p>
           <p className="mt-3 text-2xl font-semibold">
-            {isLoading ? "..." : `${stats.administratorCount} 名 / ${stats.pointsTotal} pt`}
+            {isLoading ? "..." : `${stats.activeAdministratorCount} 名 / ${stats.pointsTotal} pt`}
           </p>
-          <p className="mt-2 text-sm text-(--ink-soft)">管理者アカウント数とポイント累計を表示します。</p>
+          <p className="mt-2 text-sm text-(--ink-soft)">有効な管理者アカウント数とポイント累計を表示します。</p>
           <div className="mt-5 flex gap-3">
             <Link
               href="/administrators"

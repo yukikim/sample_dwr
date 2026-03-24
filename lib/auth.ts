@@ -96,11 +96,12 @@ export async function verifyAdministratorCredentials(email: string, password: st
       id: true,
       name: true,
       email: true,
+      isActive: true,
       passwordHash: true,
     },
   });
 
-  if (!administrator) {
+  if (!administrator || !administrator.isActive) {
     return null;
   }
 
@@ -150,8 +151,11 @@ export async function getCurrentAdministrator() {
     return null;
   }
 
-  return prisma.administrator.findUnique({
-    where: { id: session.administratorId },
+  return prisma.administrator.findFirst({
+    where: {
+      id: session.administratorId,
+      isActive: true,
+    },
     select: {
       id: true,
       name: true,
