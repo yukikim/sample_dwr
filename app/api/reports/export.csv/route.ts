@@ -8,25 +8,24 @@ export const runtime = "nodejs";
 type SerializedReport = ReturnType<typeof serializeReport>;
 
 const CSV_HEADERS = [
-  "ID",
   "日付",
-  "得意先コード",
-  "得意先名",
+  "得意先",
   "車種",
   "作業コード",
-  "新規/既存",
-  "台数",
-  "売上金額",
+  "状態",
+  "売上",
   "作業分",
   "工数分",
   "移動分",
+  "台数",
   "基準分",
   "ポイント",
   "備考",
-  "作成者ID",
-  "作成日時",
-  "更新日時",
 ];
+
+function formatClientLabel(report: SerializedReport) {
+  return `${report.clientName} (${report.clientCode})`;
+}
 
 function escapeCsvValue(value: string | number | null) {
   if (value === null) {
@@ -44,24 +43,19 @@ function escapeCsvValue(value: string | number | null) {
 
 function buildCsvContent(reports: SerializedReport[]) {
   const rows = reports.map((report) => [
-    report.id,
     report.workDate,
-    report.clientCode,
-    report.clientName,
+    formatClientLabel(report),
     report.carType,
     report.workCode,
     formatCustomerStatusLabel(report.customerStatus),
-    report.unitCount,
     report.salesAmount,
     report.workMinutes,
     report.laborMinutes,
     report.travelMinutes,
+    report.unitCount,
     report.standardMinutes,
     report.points,
     report.remarks,
-    report.createdBy,
-    report.createdAt,
-    report.updatedAt,
   ]);
 
   return [CSV_HEADERS, ...rows]

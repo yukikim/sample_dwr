@@ -511,7 +511,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
           </div>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <article className="rounded-[1.75rem] border border-white/60 bg-white/85 p-5 shadow-[0_14px_40px_rgba(76,47,33,0.08)]">
             <p className="text-sm text-(--ink-muted)">件数</p>
             <p className="mt-3 text-3xl font-semibold">{summary.count}</p>
@@ -716,6 +716,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                 <tr className="text-left text-sm text-(--ink-muted)">
                   <th className="px-4 py-2">日付</th>
                   <th className="px-4 py-2">得意先</th>
+                  <th className="px-4 py-2">車種</th>
                   <th className="px-4 py-2">作業コード</th>
                   <th className="px-4 py-2">状態</th>
                   <th className="px-4 py-2">売上</th>
@@ -724,6 +725,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                   <th className="px-4 py-2">移動分</th>
                   <th className="px-4 py-2">台数</th>
                   <th className="px-4 py-2">基準分</th>
+                  <th className="px-4 py-2">ポイント</th>
                   <th className="px-4 py-2">備考</th>
                   <th className="px-4 py-2">操作</th>
                 </tr>
@@ -731,7 +733,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={12} className="rounded-3xl border border-dashed border-black/10 px-4 py-10 text-center text-sm text-(--ink-soft)">
+                    <td colSpan={14} className="rounded-3xl border border-dashed border-black/10 px-4 py-10 text-center text-sm text-(--ink-soft)">
                       {isFetching ? "日報データを読み込んでいます..." : "条件に一致する日報はありません。"}
                     </td>
                   </tr>
@@ -743,6 +745,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                         <div className="font-medium">{item.clientName}</div>
                         <div className="text-(--ink-muted)">{item.clientCode}</div>
                       </td>
+                      <td className="px-4 py-4 text-sm">{item.carType ?? "-"}</td>
                       <td className="px-4 py-4 text-sm">{item.workCode}</td>
                       <td className="px-4 py-4 text-sm">{formatCustomerStatus(item.customerStatus)}</td>
                       <td className="px-4 py-4 text-sm">{formatCurrency(item.salesAmount)}</td>
@@ -751,6 +754,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                       <td className="px-4 py-4 text-sm">{item.travelMinutes}</td>
                       <td className="px-4 py-4 text-sm">{item.unitCount}</td>
                       <td className="px-4 py-4 text-sm">{formatOptionalNumber(item.standardMinutes)}</td>
+                      <td className="px-4 py-4 text-sm">{formatOptionalNumber(item.points)}</td>
                       <td className="px-4 py-4 text-sm text-(--ink-soft)">{item.remarks ?? "-"}</td>
                       <td className="rounded-r-3xl px-4 py-4 text-sm">
                         <div className="flex flex-wrap gap-2">
