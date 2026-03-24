@@ -10,6 +10,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:seed": "node prisma/seed.mjs",
+    "prisma:seed:reports": "node prisma/seed-reports.mjs",
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
