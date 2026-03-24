@@ -259,6 +259,556 @@ API は認証前提とし、未認証アクセスには 401 を返す。
 - 本番データベース: Neon PostgreSQL
 - ローカル DB: Docker 上の PostgreSQL
 
+### 5.5 Prisma スキーマ詳細設計
+
+Prisma は 7 系を採用し、スキーマ定義と CLI 設定を分離する。
+
+- Prisma schema: [prisma/schema.prisma](prisma/schema.prisma)
+- Prisma 設定: [prisma.config.ts](prisma.config.ts)
+- 接続ユーティリティ: [lib/prisma.ts](lib/prisma.ts)
+- 初回マイグレーション: [prisma/migrations/20260324044422_init/migration.sql](prisma/migrations/20260324044422_init/migration.sql)
+
+設計方針:
+
+- DB の論理設計は [DB_DESIGN.md](DB_DESIGN.md) を正とし、Prisma schema はその実装表現として管理する
+- テーブル名とカラム名は PostgreSQL 側で snake_case を採用し、アプリ側は Prisma のモデル名・フィールド名で camelCase を利用する
+- UUID を主キーとし、作成日時と更新日時は全主要テーブルに持たせる
+- Prisma Client の runtime 接続は PostgreSQL adapter を必須とする
+
+#### 管理者モデル詳細
+
+Administrator モデルは管理者認証と将来の管理者追加機能の基礎となる。
+
+主要フィールド:
+
+- id: UUID 主キー
+- name: 管理者表示名
+- email: ログイン ID。ユニーク制約を付与
+- passwordHash: bcrypt でハッシュ化したパスワード
+- createdAt: 作成日時
+- updatedAt: 更新日時
+
+制約・インデックス:
+
+- email に一意制約を設定し、同一メールアドレスでの重複作成を防止する
+- passwordHash は平文を保持しない
+
+#### 日報モデル詳細
+
+DailyWorkReport モデルは日報入力、一覧、検索、集計の中心テーブルとする。
+
+主要フィールド:
+
+- workDate: 日報日付
+- clientCode: 得意先コード
+- clientName: 得意先名
+- workMinutes: 作業分
+- laborMinutes: 工数分
+- travelMinutes: 移動分
+- carType: 車種
+- workCode: 作業コード
+- customerStatus: 新規または既存
+- unitCount: 台数
+- salesAmount: 売上金額
+- standardMinutes: 基準分
+- points: ポイント
+- remarks: 備考
+- createdById: 登録した管理者の外部キー
+
+制約・インデックス:
+
+- createdById は administrators.id を参照する外部キーとする
+- 一覧・検索性能を考慮し、workDate、clientCode、clientName、workCode、customerStatus に索引を付与する
+- customerStatus は enum として管理し、アプリ側の不正値投入を防止する
+
+#### Prisma runtime 接続詳細
+
+Prisma 7 系では schema 側ではなく [prisma.config.ts](prisma.config.ts) で接続 URL を指定する。
+
+- DATABASE_URL は [.env](.env) または本番環境変数から読み込む
+- アプリ本体では [lib/prisma.ts](lib/prisma.ts) が PrismaPg adapter 付き PrismaClient を singleton で生成する
+- 開発時のホットリロードによる PrismaClient の多重生成を避けるため global キャッシュを利用する
+
+#### マイグレーション運用方針
+
+- スキーマ変更時は Prisma Migrate を使って migration を生成する
+- 初回 migration で administrators と daily_work_reports、および関連 enum と index を作成済み
+- 開発 DB のスキーマを基準にしつつ、README、DB 設計書、Prisma schema の三者整合を保つ
+
+#### seed 設計
+
+- seed スクリプトは [prisma/seed.mjs](prisma/seed.mjs) で管理する
+- INITIAL_ADMIN_NAME、INITIAL_ADMIN_EMAIL、INITIAL_ADMIN_PASSWORD を用いて初期管理者を投入する
+- 同一メールアドレスの管理者が存在する場合は再作成しない冪等実行とする
+- 初期パスワードは bcrypt でハッシュ化して保存する
+
+### 5.6 ログイン認証詳細設計
+
+管理者認証は Next.js App Router と Server Action を前提に、Cookie ベースのセッション管理で実装する。
+
+関連ファイル:
+
+- 認証ヘルパー: [lib/auth.ts](lib/auth.ts)
+- ログイン・ログアウト Action: [app/actions/auth.ts](app/actions/auth.ts)
+- ログイン画面: [app/page.tsx](app/page.tsx)
+- ログインフォーム: [app/login-form.tsx](app/login-form.tsx)
+- 認証後画面: [app/dashboard/page.tsx](app/dashboard/page.tsx)
+
+#### 認証方式
+
+- 認証対象は administrators テーブルに登録された管理者のみとする
+- ログイン時はメールアドレスで管理者を検索し、passwordHash と入力パスワードを bcrypt.compare で照合する
+- 認証成功時は管理者 ID と有効期限を含むセッション payload を生成する
+- payload は HMAC-SHA256 で署名し、改ざん検知可能な Cookie として保存する
+
+#### セッション設計
+
+- Cookie 名: polish_dwr_session
+- 保持内容: administratorId、expiresAt、署名
+- 署名鍵: AUTH_SECRET
+- 有効期間: 7 日
+- Cookie 属性: httpOnly、sameSite=lax、path=/、production 時は secure=true
+
+セッションの流れ:
+
+1. ログインフォームからメールアドレスとパスワードを送信する
+2. Server Action が [lib/auth.ts](lib/auth.ts) を通じて資格情報を検証する
+3. 検証成功時に署名付き Cookie を発行する
+4. 以降の Server Component は Cookie を読み取り、現在の管理者を特定する
+5. ログアウト時は Server Action が Cookie を削除する
+
+#### Next.js 16 における実装制約への対応
+
+- cookies() は非同期 API として扱う
+- Cookie の読み取りは Server Component または server-only のヘルパーで行う
+- Cookie の set と delete は Server Action でのみ実施する
+- 認証後リダイレクトは Server Action 側で redirect を使用する
+
+#### 画面遷移設計
+
+- 未ログインでトップページへアクセスした場合: ログイン画面を表示
+- ログイン済みでトップページへアクセスした場合: ダッシュボードへ redirect
+- 未ログインでダッシュボードへアクセスした場合: トップページへ redirect
+- ログアウト後: トップページへ redirect
+
+#### エラーハンドリング方針
+
+- 入力不足や不正な formData はログイン失敗として扱い、汎用エラーメッセージを返す
+- メールアドレス不一致またはパスワード不一致時は、アカウントの存在有無を秘匿した同一メッセージを返す
+- 不正なセッション Cookie や期限切れセッションは未ログインとして扱う
+- 本番環境で AUTH_SECRET 未設定の場合は起動時または認証処理時にエラーとする
+
+#### セキュリティ設計
+
+- パスワードの平文保存は禁止し、DB には password_hash のみ保持する
+- セッション Cookie は httpOnly にしてクライアント JavaScript から参照不可とする
+- Cookie 値は署名で保護し、改ざんされた場合は無効化する
+- 認証済み判定は Cookie の存在のみではなく署名検証と DB 上の管理者存在確認まで行う
+- 開発環境では AUTH_SECRET に暫定値を許容するが、本番では必須にする
+
+#### 今後の拡張方針
+
+- 管理者追加機能では passwordHash 生成ロジックを [lib/auth.ts](lib/auth.ts) 周辺へ共通化する余地がある
+- より強いセキュリティが必要になった場合は DB セッション方式または認証ライブラリ導入を検討する
+- 監査ログが必要になった場合はログイン成功・失敗・ログアウトを記録する
+
+### 5.7 認証フロー詳細設計
+
+認証フローはログイン画面、Server Action、認証ヘルパー、Prisma、PostgreSQL の責務分離で構成する。
+
+#### ログイン処理シーケンス
+
+```mermaid
+sequenceDiagram
+		participant Browser as Browser
+		participant Page as app/page.tsx
+		participant Action as app/actions/auth.ts
+		participant Auth as lib/auth.ts
+		participant Prisma as lib/prisma.ts
+		participant DB as PostgreSQL
+
+		Browser->>Page: ログイン画面へアクセス
+		Page->>Auth: 現在のセッションを確認
+		Auth->>Page: 未ログイン
+		Browser->>Action: メールアドレスとパスワードを送信
+		Action->>Auth: 資格情報の検証を依頼
+		Auth->>Prisma: administrator を email で検索
+		Prisma->>DB: SELECT administrators
+		DB-->>Prisma: 管理者レコード
+		Prisma-->>Auth: id, name, email, passwordHash
+		Auth->>Auth: bcrypt.compare で照合
+		Auth-->>Action: 検証結果
+		Action->>Action: セッション Cookie を発行
+		Action-->>Browser: /dashboard へ redirect
+		Browser->>Page: ダッシュボードへアクセス
+```
+
+#### セッション確認シーケンス
+
+1. Server Component が Cookie を取得する
+2. [lib/auth.ts](lib/auth.ts) が署名検証と有効期限検証を行う
+3. administratorId を使って DB 上の管理者存在確認を行う
+4. 有効な場合のみ現在の管理者情報を返す
+5. 無効な場合は null を返し、呼び出し元でログイン画面へ遷移させる
+
+#### ログアウト処理シーケンス
+
+1. ダッシュボード上のログアウト操作を送信する
+2. Server Action が Cookie を delete する
+3. トップページへ redirect する
+4. 次回アクセス時は未認証として扱う
+
+#### 認証責務の分離
+
+- app/page.tsx: ログイン画面の表示とログイン済み判定による redirect
+- app/login-form.tsx: フォーム入力と Action 実行
+- app/actions/auth.ts: Cookie 更新を伴うログイン・ログアウト処理
+- lib/auth.ts: 資格情報照合、セッション生成、セッション検証
+- lib/prisma.ts: Prisma Client の生成と再利用
+
+### 5.8 日報 CRUD 詳細設計
+
+日報 CRUD は認証済み管理者のみ利用できる前提で、登録、更新、削除のすべてに対して入力検証と操作者情報の一貫性を担保する。
+
+#### 登録機能
+
+目的:
+
+- 管理者が日次の業務実績を 1 件ずつ登録できるようにする
+
+入力項目:
+
+- 日付
+- 得意先コード
+- 得意先名
+- 作業分
+- 工数分
+- 移動分
+- 車種
+- 作業コード
+- 新規/既存
+- 台数
+- 売上金額
+- 基準分
+- ポイント
+- 備考
+
+登録時の処理:
+
+1. 認証済み管理者を取得する
+2. 入力値を server side で型変換する
+3. 必須項目、数値範囲、enum 値、日付形式を検証する
+4. createdById に現在の管理者 ID を設定する
+5. daily_work_reports へ INSERT する
+6. 登録成功後は一覧または詳細画面へ遷移する
+
+登録時の検証ルール:
+
+- workDate は有効な日付であること
+- clientCode、clientName、workCode は空文字不可
+- workMinutes、laborMinutes、travelMinutes、unitCount、salesAmount は 0 以上
+- standardMinutes、points は未入力を許可するが、入力時は 0 以上
+- customerStatus は NEW または EXISTING のみ許可する
+
+#### 更新機能
+
+目的:
+
+- 登録済み日報の誤入力や内容変更に対応する
+
+更新時の処理:
+
+1. 対象 ID の日報存在確認を行う
+2. 認証済み管理者であることを確認する
+3. 更新対象フィールドを再度検証する
+4. daily_work_reports を UPDATE する
+5. updatedAt を自動更新する
+
+更新方針:
+
+- 業務上の編集権限制約が追加されるまでは、ログイン済み管理者全員に更新を許可する
+- 将来的に登録者本人のみ編集可能とする場合に備え、createdById を保持する
+
+#### 削除機能
+
+目的:
+
+- 重複登録や誤登録データを除去する
+
+削除時の処理:
+
+1. 対象 ID の存在確認を行う
+2. 認証済み管理者であることを確認する
+3. 論理削除要件がない現時点では物理削除とする
+4. 削除後は一覧画面へ戻し、再検索結果を再表示する
+
+削除方針:
+
+- 現時点では監査ログ未実装のため、削除操作の履歴は保持しない
+- 将来的に誤削除復旧が必要になった場合は deletedAt を追加して論理削除へ切り替える
+
+#### 一覧・詳細取得機能
+
+一覧取得では日報テーブルを検索条件付きで参照し、詳細取得では単一レコードを返す。
+
+一覧検索条件:
+
+- 日付開始
+- 日付終了
+- 得意先コード
+- 得意先名
+- 車種
+- 作業コード
+- 新規/既存
+
+一覧取得時の仕様:
+
+- 指定条件がない場合は新しい日付順で一覧表示する
+- 条件指定時は where 句を動的に構築する
+- 件数とあわせて売上金額、作業分、工数分、移動分、台数、基準分、ポイントの合計を返せる構造にする
+- 将来的なページング追加を見越して limit と offset を扱える設計にする
+
+#### データ整合性方針
+
+- 作成者を daily_work_reports.created_by に必ず記録する
+- 更新操作では認証情報と更新対象の整合性を確認する
+- 集計は検索条件と同一条件で実行し、一覧件数と集計結果が一致するようにする
+
+### 5.9 API 詳細設計
+
+UI 主導のログイン・ログアウトは Server Action を利用するが、日報、集計、帳票、管理者機能は Route Handler 化しやすいよう HTTP API の形でも詳細設計を定義する。
+
+#### 共通方針
+
+- ベースパスは /api とする
+- すべての API は管理者認証を前提とする
+- 未認証時は 401 Unauthorized を返す
+- バリデーションエラーは 400 Bad Request を返す
+- 対象未存在は 404 Not Found を返す
+- 予期しない障害は 500 Internal Server Error を返す
+
+レスポンス共通形式:
+
+```json
+{
+	"data": {},
+	"error": null
+}
+```
+
+エラー時の共通形式:
+
+```json
+{
+	"data": null,
+	"error": {
+		"code": "VALIDATION_ERROR",
+		"message": "入力内容を確認してください。"
+	}
+}
+```
+
+#### 認証 API
+
+ログインは現実装では Server Action を利用するが、将来 API 化する場合の設計を以下とする。
+
+| 機能 | Method | Path | 説明 |
+| --- | --- | --- | --- |
+| ログイン | POST | /api/auth/login | メールアドレスとパスワードでログイン |
+| ログアウト | POST | /api/auth/logout | セッションを破棄 |
+| セッション確認 | GET | /api/auth/session | 現在のログイン管理者を取得 |
+
+POST /api/auth/login:
+
+リクエスト例:
+
+```json
+{
+	"email": "admin@example.com",
+	"password": "change-me"
+}
+```
+
+成功レスポンス例:
+
+```json
+{
+	"data": {
+		"administrator": {
+			"id": "uuid",
+			"name": "Administrator",
+			"email": "admin@example.com"
+		}
+	},
+	"error": null
+}
+```
+
+#### 日報 API
+
+| 機能 | Method | Path | 説明 |
+| --- | --- | --- | --- |
+| 日報一覧取得 | GET | /api/reports | 条件付き一覧と件数を取得 |
+| 日報詳細取得 | GET | /api/reports/:id | 単一日報を取得 |
+| 日報作成 | POST | /api/reports | 新規登録 |
+| 日報更新 | PATCH | /api/reports/:id | 既存日報を更新 |
+| 日報削除 | DELETE | /api/reports/:id | 既存日報を削除 |
+
+GET /api/reports のクエリ例:
+
+- startDate=2026-03-01
+- endDate=2026-03-31
+- clientCode=C001
+- clientName=株式会社サンプル
+- carType=普通車
+- workCode=W001
+- customerStatus=NEW
+- page=1
+- pageSize=50
+
+GET /api/reports のレスポンス例:
+
+```json
+{
+	"data": {
+		"items": [
+			{
+				"id": "uuid",
+				"workDate": "2026-03-24",
+				"clientCode": "C001",
+				"clientName": "株式会社サンプル",
+				"workMinutes": 60,
+				"laborMinutes": 45,
+				"travelMinutes": 30,
+				"carType": "普通車",
+				"workCode": "W001",
+				"customerStatus": "NEW",
+				"unitCount": 1,
+				"salesAmount": 12000,
+				"standardMinutes": 50,
+				"points": 3,
+				"remarks": "初回訪問"
+			}
+		],
+		"pagination": {
+			"page": 1,
+			"pageSize": 50,
+			"total": 1
+		}
+	},
+	"error": null
+}
+```
+
+POST /api/reports のリクエスト例:
+
+```json
+{
+	"workDate": "2026-03-24",
+	"clientCode": "C001",
+	"clientName": "株式会社サンプル",
+	"workMinutes": 60,
+	"laborMinutes": 45,
+	"travelMinutes": 30,
+	"carType": "普通車",
+	"workCode": "W001",
+	"customerStatus": "NEW",
+	"unitCount": 1,
+	"salesAmount": 12000,
+	"standardMinutes": 50,
+	"points": 3,
+	"remarks": "初回訪問"
+}
+```
+
+PATCH /api/reports/:id の方針:
+
+- 部分更新を許可する
+- 未指定フィールドは既存値を維持する
+- 更新対象フィールドも作成時と同じ検証を通す
+
+DELETE /api/reports/:id のレスポンス例:
+
+```json
+{
+	"data": {
+		"deleted": true
+	},
+	"error": null
+}
+```
+
+#### 集計 API
+
+| 機能 | Method | Path | 説明 |
+| --- | --- | --- | --- |
+| 条件付き集計取得 | GET | /api/reports/summary | 一覧条件に対応する集計結果を取得 |
+
+GET /api/reports/summary のレスポンス例:
+
+```json
+{
+	"data": {
+		"count": 12,
+		"salesAmountTotal": 240000,
+		"workMinutesTotal": 720,
+		"laborMinutesTotal": 600,
+		"travelMinutesTotal": 180,
+		"unitCountTotal": 15,
+		"standardMinutesTotal": 640,
+		"pointsTotal": 42
+	},
+	"error": null
+}
+```
+
+#### PDF 出力 API
+
+| 機能 | Method | Path | 説明 |
+| --- | --- | --- | --- |
+| PDF 出力 | GET | /api/reports/export.pdf | 検索条件に対応した帳票を PDF で返す |
+
+仕様:
+
+- クエリパラメータは /api/reports と同一形式を基本とする
+- レスポンスは application/pdf とする
+- 出力対象 0 件時の扱いは空帳票または 400 を実装時に選定する
+
+#### 管理者 API
+
+| 機能 | Method | Path | 説明 |
+| --- | --- | --- | --- |
+| 管理者追加 | POST | /api/administrators | 新規管理者を追加 |
+| 管理者一覧 | GET | /api/administrators | 将来的な一覧取得 |
+
+POST /api/administrators のリクエスト例:
+
+```json
+{
+	"name": "Sub Admin",
+	"email": "sub-admin@example.com",
+	"password": "change-me-too"
+}
+```
+
+バリデーション方針:
+
+- email は形式チェックと重複チェックを行う
+- password は最低文字数を設ける
+- name は空文字不可とする
+- 登録時に password を bcrypt でハッシュ化する
+
+#### 実装優先順
+
+1. ログイン・ログアウトの Server Action
+2. 日報一覧取得 API
+3. 日報作成 API
+4. 日報更新 API
+5. 日報削除 API
+6. 集計 API
+7. PDF 出力 API
+8. 管理者追加 API
+
 ## 6. 今後の実装検討事項
 
 - 管理者一覧、編集、無効化機能の追加要否
