@@ -1,36 +1,259 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Polish-DWR
 
-## Getting Started
+業務日報を登録、検索、集計、PDF出力できる管理者向けウェブアプリの要件定義および基本設計です。
 
-First, run the development server:
+## 1. プロジェクト概要
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- プロジェクト名: Polish-DWR
+- 目的: 日々の業務実績を入力・蓄積し、条件検索、集計、帳票出力を可能にする
+- 利用者: ログイン済みの管理者のみ
+- 提供形態: Next.js ベースのウェブアプリケーション
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 2. 要件定義
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2.1 業務要件
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- 管理者が日報データを日次または任意の日付で登録できること
+- 登録済みの日報データを一覧表示できること
+- 一覧から期間や各入力項目で検索、絞り込みできること
+- 一覧画面で集計結果を確認できること
+- 集計結果を PDF としてダウンロードできること
+- 管理者のみがアプリを利用できること
+- 初期管理者を環境設定で投入できること
+- ログイン済み管理者が別の管理者を追加できること
 
-## Learn More
+### 2.2 機能要件
 
-To learn more about Next.js, take a look at the following resources:
+#### 認証機能
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- メールアドレスとパスワードでログインできること
+- 管理者アカウントはメールアドレス、名前、パスワードを保持すること
+- 未認証ユーザーは管理画面へアクセスできないこと
+- ログアウトできること
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+#### 日報登録機能
 
-## Deploy on Vercel
+- 日報を新規登録できること
+- 既存日報を編集できること
+- 不要な日報を削除できること
+- 登録時に必須項目と型の妥当性を検証すること
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+#### 日報一覧・検索機能
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 登録済み日報を一覧表示できること
+- 日付範囲で絞り込みできること
+- 各項目で部分一致または完全一致検索ができること
+- 検索結果に対する件数や集計値を表示できること
+
+#### 集計・帳票機能
+
+- 売上金額、作業分、工数分、移動分、台数、基準分、ポイントなどを集計できること
+- 集計結果を画面表示できること
+- 表示中の条件に基づく集計結果を PDF 出力できること
+
+#### 管理者管理機能
+
+- ログイン済み管理者が新規管理者を作成できること
+- 管理者一覧の参照可否は実装時に判断するが、少なくとも追加機能は提供すること
+
+### 2.3 非機能要件
+
+- フレームワーク: Next.js
+- フロントエンド: React
+- 言語: TypeScript
+- データベース: PostgreSQL
+- 本番 DB: Neon を想定
+- ローカル開発 DB: Docker 上の PostgreSQL を想定
+- デプロイ先: Vercel
+- CI/CD: GitHub を利用
+- セキュリティ: 認証必須、パスワードはハッシュ化して保存すること
+- 可用性: 一般的な業務利用を想定し、検索と一覧表示が実用的な速度で動作すること
+- 保守性: 入力、認証、集計、出力の責務を分離した構成にすること
+
+## 3. 入力項目定義
+
+日報 1 件あたりの入力項目は以下とする。
+
+| 項目名 | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| 日付 | date | 必須 | 業務実施日 |
+| 得意先コード | string | 必須 | 得意先識別コード |
+| 得意先 | string | 必須 | 得意先名 |
+| 作業分 | number | 必須 | 作業時間分 |
+| 工数分 | number | 必須 | 工数時間分 |
+| 移動分 | number | 必須 | 移動時間分 |
+| 車種 | string | 任意 | 対象車種 |
+| 作業コード | string | 必須 | 作業分類コード |
+| 新規/既存 | enum | 必須 | 新規 または 既存 |
+| 台数 | number | 必須 | 対象台数 |
+| 売上金額 | number | 必須 | 売上額 |
+| 基準分 | number | 任意 | 基準時間分 |
+| ポイント | number | 任意 | 評価用ポイント |
+| 備考 | string | 任意 | 補足事項 |
+
+## 4. 基本設計
+
+### 4.1 システム構成
+
+- クライアント: ブラウザ
+- アプリケーション: Next.js アプリケーション
+- 認証: 管理者ログイン機能
+- データベース: PostgreSQL
+- 帳票出力: サーバー側または API 経由で PDF 生成
+
+想定構成:
+
+1. 管理者がブラウザからログインする
+2. Next.js が認証状態を確認する
+3. 認証済みユーザーのみ日報 CRUD、検索、集計機能を利用する
+4. データは PostgreSQL に保存する
+5. 集計結果は画面表示および PDF 出力する
+
+### 4.2 画面設計
+
+#### ログイン画面
+
+- 入力項目: メールアドレス、パスワード
+- 処理: 認証、エラーメッセージ表示、ログイン後ホームへ遷移
+
+#### ダッシュボード画面
+
+- 主要導線: 日報登録、日報一覧、集計結果、管理者追加
+- 補助情報: 期間別件数、売上合計、ポイント合計などのサマリー表示
+
+#### 日報登録・編集画面
+
+- 入力フォームを 1 件分表示
+- 登録、更新、削除操作を提供
+- 入力エラーを項目単位で表示
+
+#### 日報一覧画面
+
+- 日報一覧をテーブル形式で表示
+- 日付範囲、得意先コード、得意先、車種、作業コード、新規/既存などで絞り込み
+- 対象件数と集計結果を一覧上部または下部に表示
+
+#### PDF 出力画面または出力操作
+
+- 現在の検索条件を引き継いで PDF を出力
+- 出力対象期間や集計項目を明示
+
+#### 管理者追加画面
+
+- 入力項目: 名前、メールアドレス、パスワード
+- 登録済みメールアドレスの重複を防止
+
+### 4.3 データ設計
+
+#### 管理者テーブル
+
+| カラム名 | 型 | 説明 |
+| --- | --- | --- |
+| id | uuid または serial | 主キー |
+| name | varchar | 管理者名 |
+| email | varchar | ログイン用メールアドレス、ユニーク |
+| password_hash | varchar | ハッシュ化済みパスワード |
+| created_at | timestamp | 作成日時 |
+| updated_at | timestamp | 更新日時 |
+
+#### 日報テーブル
+
+| カラム名 | 型 | 説明 |
+| --- | --- | --- |
+| id | uuid または serial | 主キー |
+| work_date | date | 日報日付 |
+| client_code | varchar | 得意先コード |
+| client_name | varchar | 得意先 |
+| work_minutes | integer | 作業分 |
+| labor_minutes | integer | 工数分 |
+| travel_minutes | integer | 移動分 |
+| car_type | varchar | 車種 |
+| work_code | varchar | 作業コード |
+| customer_status | varchar | 新規/既存 |
+| unit_count | integer | 台数 |
+| sales_amount | integer or numeric | 売上金額 |
+| standard_minutes | integer | 基準分 |
+| points | integer or numeric | ポイント |
+| remarks | text | 備考 |
+| created_by | foreign key | 登録管理者 |
+| created_at | timestamp | 作成日時 |
+| updated_at | timestamp | 更新日時 |
+
+### 4.4 業務ルール
+
+- 日報は認証済み管理者のみ登録、編集、削除できる
+- 初期管理者は環境変数またはセットアップ処理で作成する
+- メールアドレスは管理者間で一意とする
+- 数値項目は負数を許可しない前提で設計する
+- PDF は検索結果または指定期間に基づく集計結果を出力対象とする
+
+### 4.5 API 設計方針
+
+- 認証 API: ログイン、ログアウト、セッション確認
+- 日報 API: 一覧取得、詳細取得、作成、更新、削除
+- 集計 API: 条件付き集計取得
+- 帳票 API: PDF 出力
+- 管理者 API: 管理者追加
+
+API は認証前提とし、未認証アクセスには 401 を返す。
+
+### 4.6 バリデーション方針
+
+- 必須項目未入力を防止する
+- 数値項目は数値変換と範囲チェックを行う
+- 日付は不正形式を拒否する
+- 新規/既存は定義済み値のみ許可する
+- メールアドレスは形式チェックを行う
+- パスワードは最低文字数などのルールを別途定義する
+
+### 4.7 権限制御
+
+- 未ログイン状態ではアプリ主要機能へアクセス不可
+- ログイン済み管理者のみ日報操作と集計閲覧が可能
+- ログイン済み管理者のみ管理者追加が可能
+
+## 5. 開発方針
+
+### 5.1 想定技術スタック
+
+- Next.js 16
+- React 19
+- TypeScript 5
+- ESLint 9
+- Tailwind CSS 4
+
+### 5.2 開発環境
+
+- アプリ起動: `npm run dev`
+- 本番ビルド: `npm run build`
+- Lint: `npm run lint`
+
+### 5.3 インフラ方針
+
+- ソースコード管理: GitHub
+- CI/CD: GitHub Actions を想定
+- 本番デプロイ: Vercel
+- 本番データベース: Neon PostgreSQL
+- ローカル DB: Docker 上の PostgreSQL
+
+## 6. 今後の実装検討事項
+
+- 管理者一覧、編集、無効化機能の追加要否
+- 検索条件保存機能の要否
+- CSV 出力の要否
+- PDF レイアウト詳細
+- 集計軸の追加要件
+- 監査ログの要否
+
+## 7. 初期実装優先度
+
+1. 管理者認証
+2. 日報 CRUD
+3. 日報一覧と検索
+4. 集計表示
+5. PDF 出力
+6. 管理者追加
+
+## 8. 備考
+
+本 README は [../プロジェクト概要.md](../%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E6%A6%82%E8%A6%81.md) をもとに、実装着手前の要件定義と基本設計として整理したものです。詳細設計では認証方式、DB スキーマの制約、PDF 生成方式、検索 UI の具体仕様を確定します。
