@@ -287,6 +287,11 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
     }));
   }
 
+  function handleExportPdf() {
+    const query = buildQuery(activeFilters);
+    window.location.href = query ? `/api/reports/export.pdf?${query}` : "/api/reports/export.pdf";
+  }
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#f7efe2,#f3e3ce_35%,#efe6db_70%,#f8f4ef_100%)] px-6 py-8 text-(--ink) sm:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
@@ -458,10 +463,11 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
 
             <button
               type="button"
-              className="inline-flex h-11 items-center justify-center rounded-full border border-black/10 bg-white px-5 text-sm font-medium text-(--ink-muted)"
-              disabled
+              onClick={handleExportPdf}
+              disabled={isFetching}
+              className="inline-flex h-11 items-center justify-center rounded-full border border-black/10 bg-white px-5 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3 disabled:opacity-50"
             >
-              PDF 出力は準備中
+              PDF をダウンロード
             </button>
           </div>
 
