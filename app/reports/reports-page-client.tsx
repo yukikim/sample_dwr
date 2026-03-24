@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import type { AuthenticatedAdministrator } from "@/lib/auth";
 
@@ -132,14 +132,37 @@ function formatCustomerStatus(value: string) {
 
 export function ReportsPageClient({ administrator }: { administrator: AuthenticatedAdministrator }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [draftFilters, setDraftFilters] = useState<Filters>(initialFilters);
   const [activeFilters, setActiveFilters] = useState<Filters>(initialFilters);
   const [items, setItems] = useState<ReportItem[]>([]);
   const [summary, setSummary] = useState<Summary>(emptySummary);
   const [total, setTotal] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isFetching, startFetching] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const status = searchParams.get("status");
+
+  useEffect(() => {
+    if (status === "created") {
+      setSuccessMessage("日報を登録しました。");
+      return;
+    }
+
+    if (status === "updated") {
+      setSuccessMessage("日報を更新しました。");
+      return;
+    }
+
+    if (status === "missing") {
+      setSuccessMessage("対象の日報が見つからなかったため一覧へ戻りました。");
+      return;
+    }
+
+    setSuccessMessage(null);
+  }, [status]);
 
   useEffect(() => {
     let cancelled = false;
@@ -202,6 +225,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
 
     setDeletingId(reportId);
     setErrorMessage(null);
+    setSuccessMessage(null);
 
     try {
       const response = await fetch(`/api/reports/${reportId}`, {
@@ -219,6 +243,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
         return;
       }
 
+      setSuccessMessage("日報を削除しました。");
       setActiveFilters((current) => ({ ...current }));
     } finally {
       setDeletingId(null);
@@ -243,6 +268,16 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
   function handleReset() {
     setDraftFilters(initialFilters);
     setActiveFilters(initialFilters);
+  }
+
+  function dismissStatusMessage() {
+    setSuccessMessage(null);
+
+    if (!status) {
+      return;
+    }
+
+    router.replace("/reports");
   }
 
   function movePage(nextPage: number) {
@@ -298,6 +333,21 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
             <p className="mt-3 text-3xl font-semibold">{summary.pointsTotal}</p>
           </article>
         </section>
+
+        {successMessage ? (
+          <section className="rounded-3xl border border-[#bfd9c7] bg-[#eef9f1] px-5 py-4 text-sm text-[#1f5d35] shadow-[0_10px_30px_rgba(31,93,53,0.08)]">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p>{successMessage}</p>
+              <button
+                type="button"
+                onClick={dismissStatusMessage}
+                className="inline-flex h-9 items-center justify-center rounded-full border border-[#bfd9c7] bg-white px-4 text-sm font-medium text-[#1f5d35]"
+              >
+                閉じる
+              </button>
+            </div>
+          </section>
+        ) : null}
 
         <section className="rounded-4xl border border-white/60 bg-white/88 p-6 shadow-[0_20px_60px_rgba(76,47,33,0.10)]">
           <form className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" onSubmit={handleSearchSubmit}>

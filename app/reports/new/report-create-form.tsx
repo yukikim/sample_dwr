@@ -56,7 +56,7 @@ export function ReportCreateForm({ administrator }: { administrator: Authenticat
         return;
       }
 
-      router.push("/reports");
+      router.push("/reports?status=created");
       router.refresh();
     });
   }

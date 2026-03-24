@@ -72,7 +72,7 @@ export function ReportEditForm({
       }
 
       if (response.status === 404) {
-        router.push("/reports");
+        router.push("/reports?status=missing");
         return;
       }
 
@@ -121,7 +121,7 @@ export function ReportEditForm({
       }
 
       if (response.status === 404) {
-        router.push("/reports");
+        router.push("/reports?status=missing");
         return;
       }
 
@@ -131,7 +131,7 @@ export function ReportEditForm({
         return;
       }
 
-      router.push("/reports");
+      router.push("/reports?status=updated");
       router.refresh();
     });
   }
