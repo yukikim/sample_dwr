@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { ReadonlyURLSearchParams } from "next/navigation";
 
 import type { AuthenticatedAdministrator } from "@/lib/auth";
 
@@ -110,6 +111,53 @@ function buildQuery(filters: Filters) {
   return searchParams.toString();
 }
 
+function parseInteger(value: string | null, fallback: number) {
+  if (!value) {
+    return fallback;
+  }
+
+  const parsedValue = Number(value);
+
+  if (!Number.isInteger(parsedValue) || parsedValue < 1) {
+    return fallback;
+  }
+
+  return parsedValue;
+}
+
+function parseFilters(searchParams: ReadonlyURLSearchParams): Filters {
+  return {
+    startDate: searchParams.get("startDate") ?? "",
+    endDate: searchParams.get("endDate") ?? "",
+    clientCode: searchParams.get("clientCode") ?? "",
+    clientName: searchParams.get("clientName") ?? "",
+    carType: searchParams.get("carType") ?? "",
+    workCode: searchParams.get("workCode") ?? "",
+    customerStatus: searchParams.get("customerStatus") ?? "",
+    page: parseInteger(searchParams.get("page"), 1),
+    pageSize: parseInteger(searchParams.get("pageSize"), 20),
+  };
+}
+
+function areFiltersEqual(left: Filters, right: Filters) {
+  return (
+    left.startDate === right.startDate &&
+    left.endDate === right.endDate &&
+    left.clientCode === right.clientCode &&
+    left.clientName === right.clientName &&
+    left.carType === right.carType &&
+    left.workCode === right.workCode &&
+    left.customerStatus === right.customerStatus &&
+    left.page === right.page &&
+    left.pageSize === right.pageSize
+  );
+}
+
+function buildReportsUrl(filters: Filters) {
+  const query = buildQuery(filters);
+  return query ? `/reports?${query}` : "/reports";
+}
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("ja-JP", {
     style: "currency",
@@ -133,8 +181,9 @@ function formatCustomerStatus(value: string) {
 export function ReportsPageClient({ administrator }: { administrator: AuthenticatedAdministrator }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [draftFilters, setDraftFilters] = useState<Filters>(initialFilters);
-  const [activeFilters, setActiveFilters] = useState<Filters>(initialFilters);
+  const initialUrlFilters = parseFilters(searchParams);
+  const [draftFilters, setDraftFilters] = useState<Filters>(initialUrlFilters);
+  const [activeFilters, setActiveFilters] = useState<Filters>(initialUrlFilters);
   const [items, setItems] = useState<ReportItem[]>([]);
   const [summary, setSummary] = useState<Summary>(emptySummary);
   const [total, setTotal] = useState(0);
@@ -144,6 +193,13 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const status = searchParams.get("status");
+
+  useEffect(() => {
+    const nextFilters = parseFilters(searchParams);
+
+    setDraftFilters((current) => (areFiltersEqual(current, nextFilters) ? current : nextFilters));
+    setActiveFilters((current) => (areFiltersEqual(current, nextFilters) ? current : nextFilters));
+  }, [searchParams]);
 
   useEffect(() => {
     if (status === "created") {
@@ -259,15 +315,19 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
 
   function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setActiveFilters({
+    const nextFilters = {
       ...draftFilters,
       page: 1,
-    });
+    };
+
+    setActiveFilters(nextFilters);
+    router.replace(buildReportsUrl(nextFilters));
   }
 
   function handleReset() {
     setDraftFilters(initialFilters);
     setActiveFilters(initialFilters);
+    router.replace("/reports");
   }
 
   function dismissStatusMessage() {
@@ -281,10 +341,17 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
   }
 
   function movePage(nextPage: number) {
-    setActiveFilters((current) => ({
+    const nextFilters = {
+      ...activeFilters,
+      page: nextPage,
+    };
+
+    setActiveFilters(nextFilters);
+    setDraftFilters((current) => ({
       ...current,
       page: nextPage,
     }));
+    router.replace(buildReportsUrl(nextFilters));
   }
 
   function handleExportPdf() {
