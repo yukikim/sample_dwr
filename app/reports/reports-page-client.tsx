@@ -456,14 +456,22 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                       <td className="px-4 py-4 text-sm">{item.workMinutes}</td>
                       <td className="px-4 py-4 text-sm text-(--ink-soft)">{item.remarks ?? "-"}</td>
                       <td className="rounded-r-3xl px-4 py-4 text-sm">
-                        <button
-                          type="button"
-                          onClick={() => void handleDelete(item.id)}
-                          disabled={deletingId === item.id}
-                          className="inline-flex h-10 items-center justify-center rounded-full border border-[#e7b4ab] bg-[#fff3f0] px-4 text-sm font-medium text-[#8e2c18] transition hover:bg-[#ffe5de] disabled:opacity-60"
-                        >
-                          {deletingId === item.id ? "削除中..." : "削除"}
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                          <Link
+                            href={`/reports/${item.id}/edit`}
+                            className="inline-flex h-10 items-center justify-center rounded-full border border-black/10 bg-white px-4 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3"
+                          >
+                            編集
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => void handleDelete(item.id)}
+                            disabled={deletingId === item.id}
+                            className="inline-flex h-10 items-center justify-center rounded-full border border-[#e7b4ab] bg-[#fff3f0] px-4 text-sm font-medium text-[#8e2c18] transition hover:bg-[#ffe5de] disabled:opacity-60"
+                          >
+                            {deletingId === item.id ? "削除中..." : "削除"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
