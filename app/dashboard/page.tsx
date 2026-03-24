@@ -62,9 +62,17 @@ export default async function DashboardPage() {
           </article>
 
           <article className="rounded-[1.75rem] border border-white/60 bg-white/85 p-6 shadow-[0_14px_40px_rgba(76,47,33,0.08)]">
-            <p className="text-sm text-(--ink-muted)">DB 接続</p>
-            <p className="mt-3 text-2xl font-semibold">Prisma</p>
-            <p className="mt-2 text-sm text-(--ink-soft)">認証処理は prisma.ts 経由の PostgreSQL 接続を利用しています。</p>
+            <p className="text-sm text-(--ink-muted)">管理者管理</p>
+            <p className="mt-3 text-2xl font-semibold">追加と確認</p>
+            <p className="mt-2 text-sm text-(--ink-soft)">管理者アカウントの追加と登録済み一覧の確認ができます。</p>
+            <div className="mt-5 flex gap-3">
+              <Link
+                href="/administrators"
+                className="inline-flex h-10 items-center justify-center rounded-full bg-(--accent-strong) px-4 text-sm font-semibold text-white transition hover:bg-(--accent-deep)"
+              >
+                管理者追加
+              </Link>
+            </div>
           </article>
         </section>
       </div>
