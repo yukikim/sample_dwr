@@ -14,6 +14,7 @@
 - 日報の新規登録、一覧表示、条件検索、更新、削除
 - 日報一覧の集計サマリー表示
 - 日報一覧の検索条件 URL クエリ同期
+- 条件付き CSV 出力
 - 条件付き PDF 出力
 - 管理者追加画面
 - 管理者一覧表示
@@ -29,7 +30,6 @@
 
 - 管理者の編集、削除、無効化
 - 日報詳細専用画面
-- CSV 出力
 - 監査ログ
 - テストコード
 - 本番用の権限細分化
@@ -53,6 +53,7 @@
 	- [app/api/reports/route.ts](app/api/reports/route.ts)
 	- [app/api/reports/[id]/route.ts](app/api/reports/[id]/route.ts)
 	- [app/api/reports/summary/route.ts](app/api/reports/summary/route.ts)
+	- [app/api/reports/export.csv/route.ts](app/api/reports/export.csv/route.ts)
 	- [app/api/reports/export.pdf/route.ts](app/api/reports/export.pdf/route.ts)
 - 管理者 API
 	- [app/api/administrators/route.ts](app/api/administrators/route.ts)
@@ -1016,14 +1017,15 @@ POST /api/administrators のリクエスト例:
 5. 日報削除 API
 6. 集計 API
 7. PDF 出力 API
-8. 管理者追加 API
+8. CSV 出力 API
+9. 管理者追加 API
 
 ## 6. 今後の実装検討事項
 
 - 管理者一覧、編集、無効化機能の追加要否
 - 検索条件保存機能の要否
-- CSV 出力の要否
 - PDF レイアウト詳細
+- CSV 列構成や外部連携要件の追加要否
 - 集計軸の追加要件
 - 監査ログの要否
 

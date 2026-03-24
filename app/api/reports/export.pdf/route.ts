@@ -6,6 +6,7 @@ import { PDFDocument, type PDFFont, type PDFPage, rgb } from "pdf-lib";
 
 import { apiError, requireAuthenticatedAdministrator } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
+import { buildReportExportFileName } from "@/lib/report-export";
 import { buildReportWhere, serializeReport } from "@/lib/reports";
 
 export const runtime = "nodejs";
@@ -50,59 +51,6 @@ function formatCurrency(value: number) {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("ja-JP").format(value);
-}
-
-function sanitizeFileNamePart(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9\-_.]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 30);
-}
-
-function buildReportFileName(searchParams: URLSearchParams) {
-  const parts = ["polish-dwr", "report"];
-  const startDate = searchParams.get("startDate");
-  const endDate = searchParams.get("endDate");
-  const clientCode = searchParams.get("clientCode");
-  const workCode = searchParams.get("workCode");
-  const customerStatus = searchParams.get("customerStatus");
-  const clientName = searchParams.get("clientName");
-  const carType = searchParams.get("carType");
-
-  if (startDate || endDate) {
-    parts.push(`period-${startDate ?? "from"}-${endDate ?? "to"}`);
-  }
-
-  if (clientCode) {
-    parts.push(`client-${sanitizeFileNamePart(clientCode)}`);
-  } else if (clientName) {
-    parts.push(`client-${sanitizeFileNamePart(clientName)}`);
-  }
-
-  if (workCode) {
-    parts.push(`work-${sanitizeFileNamePart(workCode)}`);
-  }
-
-  if (customerStatus === "new" || customerStatus === "existing") {
-    parts.push(`status-${customerStatus}`);
-  }
-
-  if (carType) {
-    parts.push(`car-${sanitizeFileNamePart(carType)}`);
-  }
-
-  if (parts.length === 2) {
-    parts.push("all");
-  }
-
-  const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-  parts.push(timestamp);
-
-  return `${parts.join("_")}.pdf`;
 }
 
 function clipText(text: string, maxWidth: number, font: PDFFont, size: number) {
@@ -407,7 +355,7 @@ export async function GET(request: Request) {
   }
 
   const pdfBytes = await pdfDocument.save();
-  const fileName = buildReportFileName(searchParams);
+  const fileName = buildReportExportFileName(searchParams, "pdf");
   const encodedFileName = encodeURIComponent(fileName);
 
   return new Response(pdfBytes, {
