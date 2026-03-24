@@ -1,8 +1,8 @@
-require("dotenv/config");
+import "dotenv/config";
 
-const { PrismaPg } = require("@prisma/adapter-pg");
-const { PrismaClient } = require("@prisma/client");
-const bcrypt = require("bcryptjs");
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 function readRequiredEnv(name) {
   const value = process.env[name]?.trim();
@@ -23,6 +23,7 @@ function createPrismaClient() {
 
 async function main() {
   const prisma = createPrismaClient();
+
   try {
     const name = readRequiredEnv("INITIAL_ADMIN_NAME");
     const email = readRequiredEnv("INITIAL_ADMIN_EMAIL");
@@ -61,9 +62,8 @@ async function main() {
   }
 }
 
-main()
-  .catch((error) => {
-    console.error("Failed to seed initial administrator.");
-    console.error(error);
-    process.exitCode = 1;
-  });
+main().catch((error) => {
+  console.error("Failed to seed initial administrator.");
+  console.error(error);
+  process.exitCode = 1;
+});
