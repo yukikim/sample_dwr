@@ -227,6 +227,7 @@ API は認証前提とし、未認証アクセスには 401 を返す。
 - アプリ起動: `npm run dev`
 - 本番ビルド: `npm run build`
 - Lint: `npm run lint`
+- 初期管理者 seed 実行: `npm run prisma:seed`
 - ローカル DB 起動: `docker compose up -d`
 - ローカル DB 停止: `docker compose down`
 
@@ -247,7 +248,7 @@ API は認証前提とし、未認証アクセスには 401 を返す。
 - DB 名: `polish_dwr`
 - ユーザー: `postgres`
 - パスワード: `postgres`
-- ポート: `5432`
+- ポート: `5433`
 
 ### 5.4 インフラ方針
 
