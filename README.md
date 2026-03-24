@@ -1,6 +1,61 @@
 # Polish-DWR
 
-業務日報を登録、検索、集計、PDF出力できる管理者向けウェブアプリの要件定義および基本設計です。
+業務日報を登録、検索、集計、PDF出力できる管理者向けウェブアプリの要件定義、設計、および実装状況を整理したドキュメントです。
+
+## 0. 現在の実装状況
+
+2026年3月24日時点で、以下の機能が実装済みです。
+
+### 0.1 実装済み
+
+- 管理者ログイン、ログアウト、Cookie セッション認証
+- 初期管理者 seed 投入
+- Prisma 7 + PostgreSQL 接続基盤
+- 日報の新規登録、一覧表示、条件検索、更新、削除
+- 日報一覧の集計サマリー表示
+- 日報一覧の検索条件 URL クエリ同期
+- 条件付き PDF 出力
+- 管理者追加画面
+- 管理者一覧表示
+- ダッシュボードでの実データサマリー表示
+
+### 0.2 部分実装
+
+- PDF 帳票
+	- 実装済み: 検索条件、集計、一覧を含む PDF ダウンロード
+	- 未反映: 正式帳票レイアウト、会社名や承認欄などの業務帳票向け装飾
+
+### 0.3 未実装
+
+- 管理者の編集、削除、無効化
+- 日報詳細専用画面
+- CSV 出力
+- 監査ログ
+- テストコード
+- 本番用の権限細分化
+
+### 0.4 実装済み画面
+
+- ログイン画面: [app/page.tsx](app/page.tsx)
+- ダッシュボード: [app/dashboard/page.tsx](app/dashboard/page.tsx)
+- 日報一覧: [app/reports/page.tsx](app/reports/page.tsx)
+- 日報登録: [app/reports/new/page.tsx](app/reports/new/page.tsx)
+- 日報編集: [app/reports/[id]/edit/page.tsx](app/reports/[id]/edit/page.tsx)
+- 管理者追加・一覧: [app/administrators/page.tsx](app/administrators/page.tsx)
+
+### 0.5 実装済み API
+
+- 認証 API
+	- [app/api/auth/login/route.ts](app/api/auth/login/route.ts)
+	- [app/api/auth/logout/route.ts](app/api/auth/logout/route.ts)
+	- [app/api/auth/session/route.ts](app/api/auth/session/route.ts)
+- 日報 API
+	- [app/api/reports/route.ts](app/api/reports/route.ts)
+	- [app/api/reports/[id]/route.ts](app/api/reports/[id]/route.ts)
+	- [app/api/reports/summary/route.ts](app/api/reports/summary/route.ts)
+	- [app/api/reports/export.pdf/route.ts](app/api/reports/export.pdf/route.ts)
+- 管理者 API
+	- [app/api/administrators/route.ts](app/api/administrators/route.ts)
 
 ## 1. プロジェクト概要
 
