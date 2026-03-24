@@ -7,7 +7,7 @@ import { PDFDocument, type PDFFont, type PDFPage, rgb } from "pdf-lib";
 import { apiError, requireAuthenticatedAdministrator } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { buildReportExportFileName } from "@/lib/report-export";
-import { buildReportWhere } from "@/lib/reports";
+import { buildReportOrderBy, buildReportWhere } from "@/lib/reports";
 
 export const runtime = "nodejs";
 
@@ -384,7 +384,7 @@ export async function GET(request: Request) {
         points: true,
         remarks: true,
       },
-      orderBy: [{ workDate: "desc" }, { createdAt: "desc" }],
+      orderBy: buildReportOrderBy(),
     }),
     prisma.dailyWorkReport.aggregate({
       where,

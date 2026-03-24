@@ -1,7 +1,7 @@
 import { apiError, requireAuthenticatedAdministrator } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { buildReportExportFileName, formatCustomerStatusLabel } from "@/lib/report-export";
-import { buildReportWhere, serializeReport } from "@/lib/reports";
+import { buildReportOrderBy, buildReportWhere, serializeReport } from "@/lib/reports";
 
 export const runtime = "nodejs";
 
@@ -89,7 +89,7 @@ export async function GET(request: Request) {
 
   const reports = await prisma.dailyWorkReport.findMany({
     where,
-    orderBy: [{ workDate: "desc" }, { createdAt: "desc" }],
+    orderBy: buildReportOrderBy(),
   });
 
   const csvContent = buildCsvContent(reports.map(serializeReport));

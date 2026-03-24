@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess, readJsonBody, requireAuthenticatedAdministrator } from "@/lib/api";
 import {
+  buildReportOrderBy,
   buildReportWhere,
   parsePagination,
   serializeReport,
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
   const [items, total] = await prisma.$transaction([
     prisma.dailyWorkReport.findMany({
       where,
-      orderBy: [{ workDate: "desc" }, { createdAt: "desc" }],
+      orderBy: buildReportOrderBy(),
       skip: pagination.skip,
       take: pagination.take,
     }),

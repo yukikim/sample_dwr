@@ -71,6 +71,21 @@ type SummaryResponse = {
   } | null;
 };
 
+type MonthOption = {
+  value: string;
+  label: string;
+};
+
+type ReportMonthsResponse = {
+  data: {
+    items: MonthOption[];
+  };
+  error: {
+    code: string;
+    message: string;
+  } | null;
+};
+
 const initialFilters: Filters = {
   startDate: "",
   endDate: "",
@@ -182,6 +197,55 @@ function formatOptionalNumber(value: number | null) {
   return value === null ? "-" : String(value);
 }
 
+function getMonthRange(value: string) {
+  if (!/^\d{4}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const [year, month] = value.split("-").map(Number);
+
+  if (!year || !month) {
+    return null;
+  }
+
+  const startDate = new Date(Date.UTC(year, month - 1, 1));
+  const endDate = new Date(Date.UTC(year, month, 0));
+
+  return {
+    startDate: startDate.toISOString().slice(0, 10),
+    endDate: endDate.toISOString().slice(0, 10),
+  };
+}
+
+function getSelectedMonthValue(filters: Pick<Filters, "startDate" | "endDate">) {
+  if (!filters.startDate || !filters.endDate) {
+    return "";
+  }
+
+  const startDate = new Date(`${filters.startDate}T00:00:00Z`);
+  const endDate = new Date(`${filters.endDate}T00:00:00Z`);
+
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return "";
+  }
+
+  if (
+    startDate.getUTCFullYear() !== endDate.getUTCFullYear() ||
+    startDate.getUTCMonth() !== endDate.getUTCMonth() ||
+    startDate.getUTCDate() !== 1
+  ) {
+    return "";
+  }
+
+  const lastDay = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth() + 1, 0)).getUTCDate();
+
+  if (endDate.getUTCDate() !== lastDay) {
+    return "";
+  }
+
+  return filters.startDate.slice(0, 7);
+}
+
 export function ReportsPageClient({ administrator }: { administrator: AuthenticatedAdministrator }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -190,6 +254,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
   const [activeFilters, setActiveFilters] = useState<Filters>(initialUrlFilters);
   const [items, setItems] = useState<ReportItem[]>([]);
   const [summary, setSummary] = useState<Summary>(emptySummary);
+  const [monthOptions, setMonthOptions] = useState<MonthOption[]>([]);
   const [total, setTotal] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -223,6 +288,33 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
 
     setSuccessMessage(null);
   }, [status]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMonthOptions() {
+      const response = await fetch("/api/reports/months", { cache: "no-store" });
+
+      if (response.status === 401) {
+        router.push("/");
+        return;
+      }
+
+      const json = (await response.json()) as ReportMonthsResponse;
+
+      if (cancelled || !response.ok) {
+        return;
+      }
+
+      setMonthOptions(json.data.items);
+    }
+
+    void loadMonthOptions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -314,6 +406,29 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
     setDraftFilters((current) => ({
       ...current,
       [name]: value,
+    }));
+  }
+
+  function handleMonthChange(value: string) {
+    if (!value) {
+      setDraftFilters((current) => ({
+        ...current,
+        startDate: "",
+        endDate: "",
+      }));
+      return;
+    }
+
+    const monthRange = getMonthRange(value);
+
+    if (!monthRange) {
+      return;
+    }
+
+    setDraftFilters((current) => ({
+      ...current,
+      startDate: monthRange.startDate,
+      endDate: monthRange.endDate,
     }));
   }
 
@@ -448,6 +563,22 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
 
         <section className="rounded-4xl border border-white/60 bg-white/88 p-6 shadow-[0_20px_60px_rgba(76,47,33,0.10)]">
           <form className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" onSubmit={handleSearchSubmit}>
+            <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
+              対象月
+              <select
+                value={getSelectedMonthValue(draftFilters)}
+                onChange={(event) => handleMonthChange(event.target.value)}
+                className="h-11 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
+              >
+                <option value="">月を選択</option>
+                {monthOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
               開始日
               <input

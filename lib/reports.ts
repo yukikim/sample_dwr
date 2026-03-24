@@ -122,8 +122,8 @@ export function buildReportWhere(query: ReportListQuery): Prisma.DailyWorkReport
 }
 
 export function parsePagination(query: ReportListQuery) {
-  const page = clampInteger(query.page, 1, 1);
-  const pageSize = clampInteger(query.pageSize, 50, 100);
+  const page = clampInteger(query.page, 1, Number.MAX_SAFE_INTEGER);
+  const pageSize = clampInteger(query.pageSize, 20, 100);
 
   return {
     page,
@@ -131,6 +131,10 @@ export function parsePagination(query: ReportListQuery) {
     skip: (page - 1) * pageSize,
     take: pageSize,
   };
+}
+
+export function buildReportOrderBy(): Prisma.DailyWorkReportOrderByWithRelationInput[] {
+  return [{ workDate: "desc" }, { createdAt: "desc" }, { id: "desc" }];
 }
 
 export function validateCreateReportInput(input: ReportInput): ValidationSuccess<ValidatedReportInput> | ValidationFailure {
