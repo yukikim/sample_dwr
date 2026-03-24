@@ -227,8 +227,29 @@ API は認証前提とし、未認証アクセスには 401 を返す。
 - アプリ起動: `npm run dev`
 - 本番ビルド: `npm run build`
 - Lint: `npm run lint`
+- ローカル DB 起動: `docker compose up -d`
+- ローカル DB 停止: `docker compose down`
 
-### 5.3 インフラ方針
+### 5.3 ローカル PostgreSQL 起動設定
+
+- Docker Compose 設定ファイル: [docker-compose.yml](docker-compose.yml)
+- 接続設定の雛形: [.env.example](.env.example)
+- ローカル用環境変数: [.env](.env)
+
+起動手順:
+
+1. [.env](.env) の接続情報を必要に応じて調整する
+2. `docker compose up -d` を実行する
+3. PostgreSQL が起動したら `DATABASE_URL` を使って Prisma から接続する
+
+ローカル DB のデフォルト設定:
+
+- DB 名: `polish_dwr`
+- ユーザー: `postgres`
+- パスワード: `postgres`
+- ポート: `5432`
+
+### 5.4 インフラ方針
 
 - ソースコード管理: GitHub
 - CI/CD: GitHub Actions を想定
