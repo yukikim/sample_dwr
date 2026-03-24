@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CustomerStatus {
+  new
+  existing
+}
+
+model Administrator {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String            @db.VarChar(100)
+  email            String            @unique(map: "uq_administrators_email") @db.VarChar(255)
+  passwordHash     String            @map("password_hash") @db.VarChar(255)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  dailyWorkReports DailyWorkReport[]
+
+  @@map("administrators")
+}
+
+model DailyWorkReport {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workDate       DateTime       @map("work_date") @db.Date
+  clientCode     String         @map("client_code") @db.VarChar(50)
+  clientName     String         @map("client_name") @db.VarChar(255)
+  workMinutes    Int            @default(0) @map("work_minutes")
+  laborMinutes   Int            @default(0) @map("labor_minutes")
+  travelMinutes  Int            @default(0) @map("travel_minutes")
+  carType        String?        @map("car_type") @db.VarChar(100)
+  workCode       String         @map("work_code") @db.VarChar(50)
+  customerStatus CustomerStatus @map("customer_status")
+  unitCount      Int            @default(0) @map("unit_count")
+  salesAmount    Decimal        @default(0) @map("sales_amount") @db.Decimal(12, 2)
+  standardMinutes Int?           @map("standard_minutes")
+  points         Decimal?       @db.Decimal(10, 2)
+  remarks        String?
+  createdBy      String         @map("created_by") @db.Uuid
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  administrator  Administrator  @relation(fields: [createdBy], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([workDate], map: "idx_dwr_work_date")
+  @@index([clientCode], map: "idx_dwr_client_code")
+  @@index([clientName], map: "idx_dwr_client_name")
+  @@index([workCode], map: "idx_dwr_work_code")
+  @@index([customerStatus], map: "idx_dwr_customer_status")
+  @@index([createdBy], map: "idx_dwr_created_by")
+  @@index([workDate, clientCode], map: "idx_dwr_work_date_client_code")
+  @@map("daily_work_reports")
+}
