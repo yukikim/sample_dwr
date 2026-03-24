@@ -47,7 +47,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const validatedInput = validateUpdateReportInput(body);
 
-  if (validatedInput.errors.length > 0) {
+  if (!validatedInput.data) {
     return apiError(
       {
         code: "VALIDATION_ERROR",

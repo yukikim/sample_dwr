@@ -603,7 +603,9 @@ export async function GET(request: Request) {
   const fileName = buildReportExportFileName(searchParams, "pdf");
   const encodedFileName = encodeURIComponent(fileName);
 
-  return new Response(pdfBytes, {
+  const pdfBuffer = new Uint8Array(pdfBytes).buffer;
+
+  return new Response(pdfBuffer, {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",

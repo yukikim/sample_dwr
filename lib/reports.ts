@@ -160,7 +160,7 @@ export function validateCreateReportInput(input: ReportInput): ValidationSuccess
     errors.push("customerStatus must be either 'new' or 'existing'.");
   }
 
-  if (errors.length > 0) {
+  if (errors.length > 0 || !workDate || !customerStatus) {
     return { data: null, errors };
   }
 

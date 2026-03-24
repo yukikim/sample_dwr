@@ -68,7 +68,7 @@ export async function POST(request: Request) {
 
   const validatedInput = validateCreateReportInput(body);
 
-  if (validatedInput.errors.length > 0) {
+  if (!validatedInput.data) {
     return apiError(
       {
         code: "VALIDATION_ERROR",

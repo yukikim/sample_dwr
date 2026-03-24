@@ -46,7 +46,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const validatedInput = validateUpdateAdministratorInput(body);
 
-  if (validatedInput.errors.length > 0) {
+  if (validatedInput.errors.length > 0 || validatedInput.data === null) {
     return apiError(
       {
         code: "VALIDATION_ERROR",

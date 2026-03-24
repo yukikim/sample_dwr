@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 
   const validatedInput = validateCreateAdministratorInput(body);
 
-  if (validatedInput.errors.length > 0) {
+  if (!validatedInput.data) {
     return apiError(
       {
         code: "VALIDATION_ERROR",
