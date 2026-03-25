@@ -179,7 +179,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
               </div>
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-3">
+            <section className="grid gap-6">
               {invoiceDocumentTypes.map((documentType) => (
                 <article key={documentType} className="rounded-4xl border border-white/60 bg-white/88 p-6 shadow-[0_20px_60px_rgba(76,47,33,0.10)]">
                   <div className="flex items-start justify-between gap-4">
@@ -208,7 +208,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
 
                     <div className="mt-5 flex items-start justify-between gap-6">
                       <div className="min-w-0 flex-1 pt-7">
-                        <div className="border-b pb-2 text-right" style={{ color: previewTheme(documentType).primary, borderColor: previewTheme(documentType).primary }}>
+                        <div className="border-b pb-2 text-left" style={{ color: previewTheme(documentType).primary, borderColor: previewTheme(documentType).primary }}>
                           <p className="text-2xl font-semibold">{selection.groups[0]?.clientName ?? "得意先"} 様</p>
                         </div>
                       </div>
@@ -219,15 +219,15 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
                       </div>
                     </div>
 
-                    <div className="mt-4 flex items-end gap-3" style={{ color: previewTheme(documentType).primary }}>
+                    <div className="mt-4 flex items-end gap-4" style={{ color: previewTheme(documentType).primary }}>
                       {[
                         { label: "年", value: new Date().getFullYear() },
                         { label: "月", value: new Date().getMonth() + 1 },
                         { label: "日", value: new Date().getDate() },
                       ].map((part, index) => (
-                        <div key={`${documentType}-${part.label}-${index}`} className="w-16 text-center text-xs">
+                        <div key={`${documentType}-${part.label}-${index}`} className="w-auto mr-2 text-center text-xs flex flex-row items-center">
+                          <div className="text-sm font-medium" style={{ borderColor: previewTheme(documentType).primary }}>{part.value}</div>
                           <p>{part.label}</p>
-                          <div className="mt-1 border-b text-sm font-medium" style={{ borderColor: previewTheme(documentType).primary }}>{part.value}</div>
                         </div>
                       ))}
                     </div>
@@ -235,9 +235,10 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
                     <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: previewTheme(documentType).primary }}>
                       <div className="flex h-10 w-47 items-stretch border" style={{ borderColor: previewTheme(documentType).primary }}>
                         <div className="flex w-22.5 items-center px-2">得意先コード</div>
-                        {Array.from({ length: 4 }).map((_, index) => (
+                          <div className="w-auto border-l border-dashed" style={{ borderColor: previewTheme(documentType).primary }} />
+                        {/* {Array.from({ length: 4 }).map((_, index) => (
                           <div key={`${documentType}-code-${index}`} className="w-5.75 border-l border-dashed" style={{ borderColor: previewTheme(documentType).primary }} />
-                        ))}
+                        ))} */}
                       </div>
                       <p>{previewTheme(documentType).intro}</p>
                     </div>
@@ -252,7 +253,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
                         <div className="flex items-center justify-center">摘要</div>
                       </div>
 
-                      {Array.from({ length: 5 }).map((_, rowIndex) => {
+                      {Array.from({ length: 10 }).map((_, rowIndex) => {
                         const item = selection.groups[0]?.items[rowIndex];
 
                         return (

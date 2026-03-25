@@ -70,10 +70,10 @@ const currencyFormatter = new Intl.NumberFormat("ja-JP", {
 
 const A5_LANDSCAPE_SIZE = {
   width: 595.28,
-  height: 419.53,
+  height: 419.53*2,
 } as const;
 
-const DETAIL_ROW_COUNT = 5;
+const DETAIL_ROW_COUNT = 10;
 
 let fontRegistered = false;
 
@@ -140,17 +140,19 @@ const styles = StyleSheet.create({
   },
   dateRow: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "flex-start",
     marginBottom: 8,
   },
   dateUnit: {
-    width: 78,
-    alignItems: "center",
+    flexDirection: "row",
+    width: 28,
+    alignItems: "flex-start",
     marginRight: 14,
   },
   dateUnitLast: {
-    width: 78,
-    alignItems: "center",
+    flexDirection: "row",
+    width: 28,
+    alignItems: "flex-start",
   },
   dateLabel: {
     fontSize: 8,
@@ -187,7 +189,7 @@ const styles = StyleSheet.create({
   codeSplitCell: {
     width: 23,
     borderLeftWidth: 1,
-    borderLeftStyle: "dashed",
+    // borderLeftStyle: "dashed",
   },
   introText: {
     fontSize: 8.5,
@@ -219,15 +221,17 @@ const styles = StyleSheet.create({
   },
   detailRow: {
     flexDirection: "row",
-    minHeight: 66,
+    // minHeight: 66,
+    // minHeight: 32,
+    height: 46,
     borderTopWidth: 1,
     borderTopStyle: "solid",
   },
   detailCell: {
-    paddingTop: 8,
-    paddingBottom: 8,
-    paddingLeft: 6,
-    paddingRight: 6,
+    paddingTop: 6,
+    paddingBottom: 6,
+    paddingLeft: 4,
+    paddingRight: 4,
     borderRightWidth: 1,
     borderRightStyle: "solid",
     justifyContent: "flex-start",
@@ -239,7 +243,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   detailText: {
-    fontSize: 8.5,
+    fontSize: 8,
   },
   amountGuide: {
     position: "absolute",
@@ -250,8 +254,8 @@ const styles = StyleSheet.create({
   },
   amountGuideLine: {
     width: 28,
-    borderLeftWidth: 1,
-    borderLeftStyle: "dashed",
+    // borderLeftWidth: 1,
+    // borderLeftStyle: "dashed",
   },
   bottomArea: {
     flexDirection: "row",
@@ -508,26 +512,27 @@ function DocumentPage({
 
       <View style={styles.dateRow}>
         <View style={styles.dateUnit}>
+          <Text style={{ color: theme.primary }}>{issueDate.year}</Text>
           <Text style={{ ...styles.dateLabel, color: theme.primary }}>年</Text>
-          <Text style={{ ...styles.dateValue, borderBottomColor: theme.primary, color: theme.primary }}>{issueDate.year}</Text>
         </View>
         <View style={styles.dateUnit}>
+          <Text style={{ color: theme.primary }}>{issueDate.month}</Text>
           <Text style={{ ...styles.dateLabel, color: theme.primary }}>月</Text>
-          <Text style={{ ...styles.dateValue, borderBottomColor: theme.primary, color: theme.primary }}>{issueDate.month}</Text>
         </View>
         <View style={styles.dateUnitLast}>
+          <Text style={{ color: theme.primary }}>{issueDate.day}</Text>
           <Text style={{ ...styles.dateLabel, color: theme.primary }}>日</Text>
-          <Text style={{ ...styles.dateValue, borderBottomColor: theme.primary, color: theme.primary }}>{issueDate.day}</Text>
         </View>
       </View>
 
       <View style={styles.codeAndIntroRow}>
         <View style={{ ...styles.codeBox, borderColor: theme.primary }}>
           <Text style={{ ...styles.codeLabelCell, color: theme.primary }}>得意先コード</Text>
+          {/* <View style={{ ...styles.codeSplitCell, borderLeftColor: theme.primary }} />
           <View style={{ ...styles.codeSplitCell, borderLeftColor: theme.primary }} />
           <View style={{ ...styles.codeSplitCell, borderLeftColor: theme.primary }} />
           <View style={{ ...styles.codeSplitCell, borderLeftColor: theme.primary }} />
-          <View style={{ ...styles.codeSplitCell, borderLeftColor: theme.primary }} />
+          <View style={{ ...styles.codeSplitCell, borderLeftColor: theme.primary }} /> */}
         </View>
         <Text style={{ ...styles.introText, color: theme.primary }}>{theme.intro}</Text>
       </View>
@@ -576,11 +581,11 @@ function DocumentPage({
               <Text style={{ ...styles.detailText, color: theme.primary }}>{item.workDescription}</Text>
             </View>
             <View style={{ ...styles.detailCell, ...styles.detailCellRight, width: "17%", borderRightColor: theme.primary, position: "relative" }}>
-              <View style={styles.amountGuide}>
+              {/* <View style={styles.amountGuide}>
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
-              </View>
+              </View> */}
               <Text style={{ ...styles.detailText, color: theme.primary }}>{item.amount}</Text>
             </View>
             <View style={{ ...styles.detailCell, width: "13%", borderRightWidth: 0 }}>
@@ -648,11 +653,11 @@ function DocumentPage({
               <Text style={{ ...styles.detailText, color: theme.primary }}>合計金額</Text>
             </View>
             <View style={{ ...styles.bottomValueCellAmount, borderLeftColor: theme.primary, position: "relative" }}>
-              <View style={styles.bottomAmountGuide}>
+              {/* <View style={styles.bottomAmountGuide}>
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
-              </View>
+              </View> */}
               <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.total}</Text>
             </View>
           </View>
