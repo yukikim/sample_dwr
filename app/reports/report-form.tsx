@@ -1,8 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 import type { AuthenticatedAdministrator } from "@/lib/auth";
+
+type ClientOption = {
+  id: string;
+  code: string;
+  name: string;
+};
 
 export type ReportFieldState = {
   workDate: string;
@@ -107,6 +114,74 @@ export function ReportForm({
   onFieldChange,
   onSubmit,
 }: ReportFormProps) {
+  const [clientOptions, setClientOptions] = useState<ClientOption[]>([]);
+  const [isClientLoading, setIsClientLoading] = useState(true);
+  const [clientLoadError, setClientLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadClients() {
+      setIsClientLoading(true);
+      setClientLoadError(null);
+
+      const response = await fetch("/api/clients", { cache: "no-store" });
+      const json = (await response.json()) as {
+        data?: {
+          items?: ClientOption[];
+        };
+        error?: {
+          message?: string;
+        } | null;
+      };
+
+      if (cancelled) {
+        return;
+      }
+
+      if (!response.ok) {
+        setClientOptions([]);
+        setClientLoadError(json.error?.message ?? "得意先一覧の取得に失敗しました。");
+        setIsClientLoading(false);
+        return;
+      }
+
+      setClientOptions(json.data?.items ?? []);
+      setIsClientLoading(false);
+    }
+
+    void loadClients();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectedClient = useMemo(
+    () => clientOptions.find((option) => option.code === fields.clientCode) ?? null,
+    [clientOptions, fields.clientCode],
+  );
+
+  useEffect(() => {
+    if (!selectedClient) {
+      return;
+    }
+
+    if (fields.clientName !== selectedClient.name) {
+      onFieldChange("clientName", selectedClient.name);
+    }
+  }, [fields.clientName, onFieldChange, selectedClient]);
+
+  function handleClientSelection(value: string) {
+    const nextClient = clientOptions.find((option) => option.code === value);
+
+    onFieldChange("clientCode", value);
+    onFieldChange("clientName", nextClient?.name ?? "");
+  }
+
+  const shouldShowFallbackOption =
+    fields.clientCode !== "" && !clientOptions.some((option) => option.code === fields.clientCode) && fields.clientName !== "";
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#f7efe2,#f3e3ce_35%,#efe6db_70%,#f8f4ef_100%)] px-6 py-8 text-(--ink) sm:px-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -153,23 +228,32 @@ export function ReportForm({
               <input
                 type="text"
                 value={fields.clientCode}
-                onChange={(event) => onFieldChange("clientCode", event.target.value)}
+                readOnly
                 required
-                className="h-12 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
-                placeholder="C001"
+                className="h-12 rounded-2xl border border-black/10 bg-[#f8f5f0] px-4 outline-none"
+                placeholder="得意先を選択すると自動入力されます"
               />
             </label>
 
             <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
               得意先名
-              <input
-                type="text"
-                value={fields.clientName}
-                onChange={(event) => onFieldChange("clientName", event.target.value)}
+              <select
+                value={fields.clientCode}
+                onChange={(event) => handleClientSelection(event.target.value)}
                 required
                 className="h-12 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
-                placeholder="株式会社サンプル"
-              />
+                disabled={isClientLoading || clientOptions.length === 0}
+              >
+                <option value="">得意先を選択してください</option>
+                {shouldShowFallbackOption ? (
+                  <option value={fields.clientCode}>{fields.clientName} ({fields.clientCode})</option>
+                ) : null}
+                {clientOptions.map((option) => (
+                  <option key={option.id} value={option.code}>
+                    {option.name} ({option.code})
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
@@ -315,14 +399,32 @@ export function ReportForm({
               </div>
             ) : null}
 
+            {clientLoadError ? (
+              <div className="md:col-span-2 rounded-2xl border border-[#e7b4ab] bg-[#fff3f0] px-4 py-4 text-sm text-[#8e2c18]">
+                {clientLoadError}
+              </div>
+            ) : null}
+
+            {!isClientLoading && clientOptions.length === 0 ? (
+              <div className="md:col-span-2 rounded-2xl border border-[#ead9bf] bg-[#fff9ee] px-4 py-4 text-sm text-[#7b5a1c]">
+                登録済みの得意先がありません。先に得意先マスタを登録してください。
+              </div>
+            ) : null}
+
             <div className="flex flex-wrap gap-3 md:col-span-2">
               <button
                 type="submit"
-                disabled={isPending}
+                disabled={isPending || isClientLoading || clientOptions.length === 0 || fields.clientCode === ""}
                 className="inline-flex h-12 items-center justify-center rounded-full bg-(--accent-strong) px-6 text-sm font-semibold text-white transition hover:bg-(--accent-deep) disabled:opacity-70"
               >
                 {isPending ? "送信中..." : submitLabel}
               </button>
+              <Link
+                href="/clients/new"
+                className="inline-flex h-12 items-center justify-center rounded-full border border-black/10 bg-white px-6 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3"
+              >
+                得意先を追加
+              </Link>
               <Link
                 href="/reports"
                 className="inline-flex h-12 items-center justify-center rounded-full border border-black/10 bg-white px-6 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3"

@@ -166,6 +166,12 @@ export function DashboardSummary() {
             >
               管理者追加
             </Link>
+            <Link
+              href="/clients"
+              className="inline-flex h-10 items-center justify-center rounded-full border border-black/10 bg-white px-4 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3"
+            >
+              得意先管理
+            </Link>
           </div>
         </article>
       </section>

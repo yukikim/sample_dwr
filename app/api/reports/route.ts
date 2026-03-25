@@ -79,9 +79,26 @@ export async function POST(request: Request) {
     );
   }
 
+  const client = await prisma.client.findUnique({
+    where: { code: validatedInput.data.clientCode },
+    select: { code: true, name: true },
+  });
+
+  if (!client) {
+    return apiError(
+      {
+        code: "CLIENT_NOT_FOUND",
+        message: "指定された得意先が見つかりません。",
+      },
+      { status: 400 },
+    );
+  }
+
   const report = await prisma.dailyWorkReport.create({
     data: {
       ...validatedInput.data,
+      clientCode: client.code,
+      clientName: client.name,
       createdBy: administrator.id,
     },
   });

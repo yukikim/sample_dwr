@@ -4,6 +4,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
+import { INITIAL_CLIENTS } from "./seed-data/clients.mjs";
+
 function readRequiredEnv(name) {
   const value = process.env[name]?.trim();
   return value ? value : null;
@@ -33,30 +35,47 @@ async function main() {
       console.warn(
         "Skipping initial administrator seed because INITIAL_ADMIN_NAME, INITIAL_ADMIN_EMAIL, or INITIAL_ADMIN_PASSWORD is missing.",
       );
-      return;
+    } else {
+      const normalizedEmail = email.toLowerCase();
+      const existingAdministrator = await prisma.administrator.findUnique({
+        where: { email: normalizedEmail },
+      });
+
+      if (existingAdministrator) {
+        console.log(`Initial administrator already exists: ${normalizedEmail}`);
+      } else {
+        const passwordHash = await bcrypt.hash(password, 12);
+
+        await prisma.administrator.create({
+          data: {
+            name,
+            email: normalizedEmail,
+            passwordHash,
+          },
+        });
+
+        console.log(`Created initial administrator: ${normalizedEmail}`);
+      }
     }
 
-    const normalizedEmail = email.toLowerCase();
-    const existingAdministrator = await prisma.administrator.findUnique({
-      where: { email: normalizedEmail },
-    });
+    const seededClients = await Promise.all(
+      INITIAL_CLIENTS.map((client) =>
+        prisma.client.upsert({
+          where: { code: client.code },
+          update: {
+            name: client.name,
+            address: client.address,
+            contactTel: client.contactTel,
+            contactEmail: client.contactEmail,
+            contactPerson: client.contactPerson,
+            remarks: client.remarks,
+          },
+          create: client,
+        }),
+      ),
+    );
 
-    if (existingAdministrator) {
-      console.log(`Initial administrator already exists: ${normalizedEmail}`);
-      return;
-    }
-
-    const passwordHash = await bcrypt.hash(password, 12);
-
-    await prisma.administrator.create({
-      data: {
-        name,
-        email: normalizedEmail,
-        passwordHash,
-      },
-    });
-
-    console.log(`Created initial administrator: ${normalizedEmail}`);
+    console.log(`Upserted initial clients: ${seededClients.length}`);
   } finally {
     await prisma.$disconnect();
   }

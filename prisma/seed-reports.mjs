@@ -3,19 +3,15 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { CustomerStatus, PrismaClient } from "@prisma/client";
 
+import { INITIAL_CLIENTS } from "./seed-data/clients.mjs";
+
 const DUMMY_REPORT_MARKER = "[seed:dummy-reports-v1]";
 const SEED_MONTHS = 3;
 
-const CLIENTS = [
-  { code: "C001", name: "株式会社青葉商会" },
-  { code: "C002", name: "北斗サービス有限会社" },
-  { code: "C003", name: "南海トランスポート" },
-  { code: "C004", name: "東都メンテナンス" },
-  { code: "C005", name: "グリーン自動車販売" },
-  { code: "C006", name: "サンライズ物流" },
-  { code: "C007", name: "ミナト整備センター" },
-  { code: "C008", name: "高原リース株式会社" },
-];
+const CLIENTS = INITIAL_CLIENTS.map((client) => ({
+  code: client.code,
+  name: client.name,
+}));
 
 const WORK_PATTERNS = [
   { code: "W001", label: "洗車・内装清掃", baseMinutes: 70, laborRatio: 0.85, baseSales: 7800, pointsRate: 0.12 },

@@ -58,6 +58,26 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
+  if (validatedInput.data.clientCode !== undefined) {
+    const client = await prisma.client.findUnique({
+      where: { code: validatedInput.data.clientCode },
+      select: { code: true, name: true },
+    });
+
+    if (!client) {
+      return apiError(
+        {
+          code: "CLIENT_NOT_FOUND",
+          message: "指定された得意先が見つかりません。",
+        },
+        { status: 400 },
+      );
+    }
+
+    validatedInput.data.clientCode = client.code;
+    validatedInput.data.clientName = client.name;
+  }
+
   const report = await prisma.dailyWorkReport.update({
     where: { id },
     data: validatedInput.data,

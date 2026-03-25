@@ -24,6 +24,22 @@ model Administrator {
   @@map("administrators")
 }
 
+model Client {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code          String   @unique(map: "uq_clients_code") @db.VarChar(50)
+  name          String   @db.VarChar(255)
+  address       String   @db.VarChar(255)
+  contactTel    String   @map("contact_tel") @db.VarChar(50)
+  contactEmail  String   @map("contact_email") @db.VarChar(255)
+  contactPerson String   @map("contact_person") @db.VarChar(100)
+  remarks       String?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([name], map: "idx_clients_name")
+  @@map("clients")
+}
+
 model DailyWorkReport {
   id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   workDate       DateTime       @map("work_date") @db.Date
