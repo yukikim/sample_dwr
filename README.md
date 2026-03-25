@@ -19,6 +19,7 @@
 - 日報一覧の検索条件 URL クエリ同期
 - 条件付き CSV 出力
 - 選択日報ベースの伝票 PDF 出力
+- データベースの JSON バックアップダウンロードとリストア
 - 管理者追加、編集、有効/無効切替
 - ダッシュボードでの実データサマリー表示
 
@@ -57,6 +58,7 @@
 - 作業内容登録: [app/work-contents/new/page.tsx](app/work-contents/new/page.tsx)
 - 作業内容編集: [app/work-contents/[id]/edit/page.tsx](app/work-contents/[id]/edit/page.tsx)
 - 管理者追加・編集・有効/無効: [app/administrators/page.tsx](app/administrators/page.tsx)
+- バックアップ / リストア: [app/database-backup/page.tsx](app/database-backup/page.tsx)
 
 ### 0.5 実装済み API
 
@@ -82,6 +84,9 @@
 	- [app/api/reports/summary/route.ts](app/api/reports/summary/route.ts)
 	- [app/api/reports/export.csv/route.ts](app/api/reports/export.csv/route.ts)
 	- [app/api/invoices/pdf/route.ts](app/api/invoices/pdf/route.ts)
+- バックアップ API
+	- [app/api/database-backup/route.ts](app/api/database-backup/route.ts)
+	- [app/api/database-backup/restore/route.ts](app/api/database-backup/restore/route.ts)
 - 管理者 API
 	- [app/api/administrators/route.ts](app/api/administrators/route.ts)
 	- [app/api/administrators/[id]/route.ts](app/api/administrators/[id]/route.ts)
@@ -108,6 +113,7 @@
 - 得意先マスタを管理し、日報登録時に得意先を選択式で入力できること
 - 車種、作業場所、作業内容をマスタ管理し、日報登録時にプルダウン選択できること
 - 日報ごとに請求処理を未/済で管理でき、一覧から直接更新できること
+- 現在のデータベース内容をバックアップとしてダウンロードし、同形式のダンプからリストアできること
 
 ### 2.2 機能要件
 
