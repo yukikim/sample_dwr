@@ -15,15 +15,15 @@
 - 日報一覧の集計サマリー表示
 - 日報一覧の検索条件 URL クエリ同期
 - 条件付き CSV 出力
-- 条件付き PDF 出力
+- 選択日報ベースの伝票 PDF 出力
 - 管理者追加、編集、有効/無効切替
 - ダッシュボードでの実データサマリー表示
 
 ### 0.2 部分実装
 
 - PDF 帳票
-	- 実装済み: 検索条件、集計、一覧を含む PDF ダウンロード
-	- 未反映: 正式帳票レイアウト、会社名や承認欄などの業務帳票向け装飾
+	- 実装済み: 日報一覧で選択したデータを対象に、作業伝票、納品書、請求書を個別または一括で PDF ダウンロード
+	- 生成方式: React PDF によるサーバー側生成
 
 ### 0.3 未実装
 
@@ -38,6 +38,7 @@
 - ログイン画面: [app/page.tsx](app/page.tsx)
 - ダッシュボード: [app/dashboard/page.tsx](app/dashboard/page.tsx)
 - 日報一覧: [app/reports/page.tsx](app/reports/page.tsx)
+- 伝票ページ: [app/invoices/page.tsx](app/invoices/page.tsx)
 - 日報登録: [app/reports/new/page.tsx](app/reports/new/page.tsx)
 - 日報編集: [app/reports/[id]/edit/page.tsx](app/reports/[id]/edit/page.tsx)
 - 管理者追加・編集・有効/無効: [app/administrators/page.tsx](app/administrators/page.tsx)
@@ -53,7 +54,7 @@
 	- [app/api/reports/[id]/route.ts](app/api/reports/[id]/route.ts)
 	- [app/api/reports/summary/route.ts](app/api/reports/summary/route.ts)
 	- [app/api/reports/export.csv/route.ts](app/api/reports/export.csv/route.ts)
-	- [app/api/reports/export.pdf/route.ts](app/api/reports/export.pdf/route.ts)
+	- [app/api/invoices/pdf/route.ts](app/api/invoices/pdf/route.ts)
 - 管理者 API
 	- [app/api/administrators/route.ts](app/api/administrators/route.ts)
 	- [app/api/administrators/[id]/route.ts](app/api/administrators/[id]/route.ts)
@@ -73,7 +74,7 @@
 - 登録済みの日報データを一覧表示できること
 - 一覧から期間や各入力項目で検索、絞り込みできること
 - 一覧画面で集計結果を確認できること
-- 集計結果を PDF としてダウンロードできること
+- 選択した日報データを伝票 PDF としてダウンロードできること
 - 管理者のみがアプリを利用できること
 - 初期管理者を環境設定で投入できること
 - ログイン済み管理者が別の管理者を追加、編集、無効化できること
@@ -105,7 +106,7 @@
 
 - 売上金額、作業分、工数分、移動分、台数、基準分、ポイントなどを集計できること
 - 集計結果を画面表示できること
-- 表示中の条件に基づく集計結果を PDF 出力できること
+- 選択した日報データから作業伝票、納品書、請求書を PDF 出力できること
 
 #### 管理者管理機能
 

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { ReadonlyURLSearchParams } from "next/navigation";
 
 import type { AuthenticatedAdministrator } from "@/lib/auth";
+import { buildInvoicePageUrl } from "@/lib/invoice-documents";
 
 type ReportItem = {
   id: string;
@@ -260,6 +261,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isFetching, startFetching] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
 
   const status = searchParams.get("status");
 
@@ -367,6 +369,9 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
   }, [activeFilters, router]);
 
   const totalPages = Math.max(1, Math.ceil(total / activeFilters.pageSize));
+  const selectedCount = selectedReportIds.length;
+  const selectedReportIdSet = new Set(selectedReportIds);
+  const allVisibleSelected = items.length > 0 && items.every((item) => selectedReportIdSet.has(item.id));
 
   async function handleDelete(reportId: string) {
     const shouldDelete = window.confirm("この日報を削除します。元に戻せません。");
@@ -396,10 +401,37 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
       }
 
       setSuccessMessage("日報を削除しました。");
+      setSelectedReportIds((current) => current.filter((id) => id !== reportId));
       setActiveFilters((current) => ({ ...current }));
     } finally {
       setDeletingId(null);
     }
+  }
+
+  function handleToggleReportSelection(reportId: string) {
+    setSelectedReportIds((current) => {
+      if (current.includes(reportId)) {
+        return current.filter((id) => id !== reportId);
+      }
+
+      return [...current, reportId];
+    });
+  }
+
+  function handleToggleVisibleSelections() {
+    const visibleIds = items.map((item) => item.id);
+
+    setSelectedReportIds((current) => {
+      if (visibleIds.every((id) => current.includes(id))) {
+        return current.filter((id) => !visibleIds.includes(id));
+      }
+
+      return Array.from(new Set([...current, ...visibleIds]));
+    });
+  }
+
+  function clearSelections() {
+    setSelectedReportIds([]);
   }
 
   function handleFilterChange(name: keyof Filters, value: string) {
@@ -471,11 +503,6 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
       page: nextPage,
     }));
     router.replace(buildReportsUrl(nextFilters));
-  }
-
-  function handleExportPdf() {
-    const query = buildQuery(activeFilters);
-    window.location.href = query ? `/api/reports/export.pdf?${query}` : "/api/reports/export.pdf";
   }
 
   function handleExportCsv() {
@@ -685,6 +712,17 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
             </div>
 
             <div className="flex flex-wrap gap-3">
+              <Link
+                href={buildInvoicePageUrl(selectedReportIds)}
+                aria-disabled={selectedCount === 0}
+                className={`inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold transition ${
+                  selectedCount === 0
+                    ? "pointer-events-none border border-black/10 bg-white text-(--ink-muted) opacity-50"
+                    : "bg-(--accent-strong) text-white hover:bg-(--accent-deep)"
+                }`}
+              >
+                選択した日報で伝票作成
+              </Link>
               <button
                 type="button"
                 onClick={handleExportCsv}
@@ -693,13 +731,32 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
               >
                 CSV をダウンロード
               </button>
+            </div>
+          </div>
+
+          <div className="mb-5 flex flex-col gap-3 rounded-3xl border border-[#eadfd5] bg-[#fff8f2] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-(--ink)">選択中の日報 {selectedCount} 件</p>
+              <p className="mt-1 text-sm text-(--ink-soft)">
+                複数ページにまたがって選択できます。選択した日報を伝票ページへ引き継ぎます。
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={handleExportPdf}
-                disabled={isFetching}
-                className="inline-flex h-11 items-center justify-center rounded-full border border-black/10 bg-white px-5 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3 disabled:opacity-50"
+                onClick={handleToggleVisibleSelections}
+                disabled={items.length === 0}
+                className="inline-flex h-10 items-center justify-center rounded-full border border-black/10 bg-white px-4 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3 disabled:opacity-50"
               >
-                PDF をダウンロード
+                {allVisibleSelected ? "表示中を選択解除" : "表示中をすべて選択"}
+              </button>
+              <button
+                type="button"
+                onClick={clearSelections}
+                disabled={selectedCount === 0}
+                className="inline-flex h-10 items-center justify-center rounded-full border border-black/10 bg-white px-4 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3 disabled:opacity-50"
+              >
+                選択をクリア
               </button>
             </div>
           </div>
@@ -714,6 +771,15 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
             <table className="min-w-full border-separate border-spacing-y-3">
               <thead>
                 <tr className="text-left text-sm text-(--ink-muted)">
+                  <th className="px-4 py-2">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={handleToggleVisibleSelections}
+                      aria-label="表示中の日報をすべて選択"
+                      className="h-4 w-4 rounded border border-black/20 accent-(--accent-strong)"
+                    />
+                  </th>
                   <th className="px-4 py-2">日付</th>
                   <th className="px-4 py-2">得意先</th>
                   <th className="px-4 py-2">車種</th>
@@ -733,14 +799,23 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={14} className="rounded-3xl border border-dashed border-black/10 px-4 py-10 text-center text-sm text-(--ink-soft)">
+                    <td colSpan={15} className="rounded-3xl border border-dashed border-black/10 px-4 py-10 text-center text-sm text-(--ink-soft)">
                       {isFetching ? "日報データを読み込んでいます..." : "条件に一致する日報はありません。"}
                     </td>
                   </tr>
                 ) : (
                   items.map((item) => (
                     <tr key={item.id} className="rounded-3xl bg-[#fffdf9] shadow-[0_12px_30px_rgba(76,47,33,0.06)]">
-                      <td className="rounded-l-3xl px-4 py-4 text-sm">{item.workDate}</td>
+                      <td className="rounded-l-3xl px-4 py-4 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedReportIdSet.has(item.id)}
+                          onChange={() => handleToggleReportSelection(item.id)}
+                          aria-label={`${item.clientName} を選択`}
+                          className="h-4 w-4 rounded border border-black/20 accent-(--accent-strong)"
+                        />
+                      </td>
+                      <td className="px-4 py-4 text-sm">{item.workDate}</td>
                       <td className="px-4 py-4 text-sm">
                         <div className="font-medium">{item.clientName}</div>
                         <div className="text-(--ink-muted)">{item.clientCode}</div>
