@@ -16,8 +16,11 @@ export async function GET(request: Request) {
     clientCode: searchParams.get("clientCode"),
     clientName: searchParams.get("clientName"),
     carType: searchParams.get("carType"),
+    workLocation: searchParams.get("workLocation"),
+    vehicleIdentifier: searchParams.get("vehicleIdentifier"),
     workCode: searchParams.get("workCode"),
     customerStatus: searchParams.get("customerStatus"),
+    billingStatus: searchParams.get("billingStatus"),
   });
   const summary = await prisma.dailyWorkReport.aggregate({
     where,

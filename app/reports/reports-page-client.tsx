@@ -8,6 +8,28 @@ import type { ReadonlyURLSearchParams } from "next/navigation";
 import type { AuthenticatedAdministrator } from "@/lib/auth";
 import { buildInvoicePageUrl } from "@/lib/invoice-documents";
 
+type ReportMasterOption = {
+  id: string;
+  name: string;
+};
+
+type VisibleColumns = {
+  carType: boolean;
+  workLocation: boolean;
+  vehicleIdentifier: boolean;
+  workCode: boolean;
+  customerStatus: boolean;
+  billingStatus: boolean;
+  salesAmount: boolean;
+  workMinutes: boolean;
+  laborMinutes: boolean;
+  travelMinutes: boolean;
+  unitCount: boolean;
+  standardMinutes: boolean;
+  points: boolean;
+  remarks: boolean;
+};
+
 type ReportItem = {
   id: string;
   workDate: string;
@@ -17,8 +39,12 @@ type ReportItem = {
   laborMinutes: number;
   travelMinutes: number;
   carType: string | null;
+  workLocation: string | null;
+  signerName: string | null;
+  vehicleIdentifier: string | null;
   workCode: string;
   customerStatus: string;
+  billingStatus: string;
   unitCount: number;
   salesAmount: number;
   standardMinutes: number | null;
@@ -43,8 +69,11 @@ type Filters = {
   clientCode: string;
   clientName: string;
   carType: string;
+  workLocation: string;
+  vehicleIdentifier: string;
   workCode: string;
   customerStatus: string;
+  billingStatus: string;
   page: number;
   pageSize: number;
 };
@@ -87,14 +116,71 @@ type ReportMonthsResponse = {
   } | null;
 };
 
+type ReportMasterListResponse = {
+  data: {
+    items: ReportMasterOption[];
+  };
+  error: {
+    code: string;
+    message: string;
+  } | null;
+};
+
+type VehicleIdentifierOptionsResponse = {
+  data: {
+    items: string[];
+  };
+  error: {
+    code: string;
+    message: string;
+  } | null;
+};
+
+const defaultVisibleColumns: VisibleColumns = {
+  carType: true,
+  workLocation: true,
+  vehicleIdentifier: true,
+  workCode: true,
+  customerStatus: true,
+  billingStatus: true,
+  salesAmount: true,
+  workMinutes: true,
+  laborMinutes: true,
+  travelMinutes: true,
+  unitCount: true,
+  standardMinutes: true,
+  points: true,
+  remarks: true,
+};
+
+const toggleableColumns: Array<{ key: keyof VisibleColumns; label: string }> = [
+  { key: "carType", label: "車種" },
+  { key: "workLocation", label: "作業場所" },
+  { key: "vehicleIdentifier", label: "登録番号または車体番号" },
+  { key: "workCode", label: "作業内容" },
+  { key: "customerStatus", label: "状態" },
+  { key: "billingStatus", label: "請求処理" },
+  { key: "salesAmount", label: "売上" },
+  { key: "workMinutes", label: "作業分" },
+  { key: "laborMinutes", label: "工数分" },
+  { key: "travelMinutes", label: "移動分" },
+  { key: "unitCount", label: "台数" },
+  { key: "standardMinutes", label: "基準分" },
+  { key: "points", label: "ポイント" },
+  { key: "remarks", label: "備考" },
+];
+
 const initialFilters: Filters = {
   startDate: "",
   endDate: "",
   clientCode: "",
   clientName: "",
   carType: "",
+  workLocation: "",
+  vehicleIdentifier: "",
   workCode: "",
   customerStatus: "",
+  billingStatus: "",
   page: 1,
   pageSize: 20,
 };
@@ -148,8 +234,11 @@ function parseFilters(searchParams: ReadonlyURLSearchParams): Filters {
     clientCode: searchParams.get("clientCode") ?? "",
     clientName: searchParams.get("clientName") ?? "",
     carType: searchParams.get("carType") ?? "",
+    workLocation: searchParams.get("workLocation") ?? "",
+    vehicleIdentifier: searchParams.get("vehicleIdentifier") ?? "",
     workCode: searchParams.get("workCode") ?? "",
     customerStatus: searchParams.get("customerStatus") ?? "",
+    billingStatus: searchParams.get("billingStatus") ?? "",
     page: parseInteger(searchParams.get("page"), 1),
     pageSize: parseInteger(searchParams.get("pageSize"), 20),
   };
@@ -162,8 +251,11 @@ function areFiltersEqual(left: Filters, right: Filters) {
     left.clientCode === right.clientCode &&
     left.clientName === right.clientName &&
     left.carType === right.carType &&
+    left.workLocation === right.workLocation &&
+    left.vehicleIdentifier === right.vehicleIdentifier &&
     left.workCode === right.workCode &&
     left.customerStatus === right.customerStatus &&
+    left.billingStatus === right.billingStatus &&
     left.page === right.page &&
     left.pageSize === right.pageSize
   );
@@ -189,6 +281,18 @@ function formatCustomerStatus(value: string) {
 
   if (value === "existing") {
     return "既存";
+  }
+
+  return value;
+}
+
+function formatBillingStatus(value: string) {
+  if (value === "processed") {
+    return "済";
+  }
+
+  if (value === "unprocessed") {
+    return "未";
   }
 
   return value;
@@ -247,6 +351,10 @@ function getSelectedMonthValue(filters: Pick<Filters, "startDate" | "endDate">) 
   return filters.startDate.slice(0, 7);
 }
 
+function countVisibleColumns(columns: VisibleColumns) {
+  return Object.values(columns).filter(Boolean).length + 4;
+}
+
 export function ReportsPageClient({ administrator }: { administrator: AuthenticatedAdministrator }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -256,11 +364,15 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
   const [items, setItems] = useState<ReportItem[]>([]);
   const [summary, setSummary] = useState<Summary>(emptySummary);
   const [monthOptions, setMonthOptions] = useState<MonthOption[]>([]);
+  const [workLocationOptions, setWorkLocationOptions] = useState<ReportMasterOption[]>([]);
+  const [vehicleIdentifierOptions, setVehicleIdentifierOptions] = useState<string[]>([]);
+  const [visibleColumns, setVisibleColumns] = useState<VisibleColumns>(defaultVisibleColumns);
   const [total, setTotal] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isFetching, startFetching] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [billingUpdatingId, setBillingUpdatingId] = useState<string | null>(null);
   const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
   const [selectedClientKey, setSelectedClientKey] = useState<string | null>(null);
 
@@ -295,24 +407,46 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
   useEffect(() => {
     let cancelled = false;
 
-    async function loadMonthOptions() {
-      const response = await fetch("/api/reports/months", { cache: "no-store" });
+    async function loadFilterOptions() {
+      const [monthsResponse, workLocationsResponse, vehicleIdentifiersResponse] = await Promise.all([
+        fetch("/api/reports/months", { cache: "no-store" }),
+        fetch("/api/work-locations", { cache: "no-store" }),
+        fetch("/api/reports/vehicle-identifiers", { cache: "no-store" }),
+      ]);
 
-      if (response.status === 401) {
+      if (
+        monthsResponse.status === 401 ||
+        workLocationsResponse.status === 401 ||
+        vehicleIdentifiersResponse.status === 401
+      ) {
         router.push("/");
         return;
       }
 
-      const json = (await response.json()) as ReportMonthsResponse;
+      const [monthsJson, workLocationsJson, vehicleIdentifiersJson] = await Promise.all([
+        monthsResponse.json() as Promise<ReportMonthsResponse>,
+        workLocationsResponse.json() as Promise<ReportMasterListResponse>,
+        vehicleIdentifiersResponse.json() as Promise<VehicleIdentifierOptionsResponse>,
+      ]);
 
-      if (cancelled || !response.ok) {
+      if (cancelled) {
         return;
       }
 
-      setMonthOptions(json.data.items);
+      if (monthsResponse.ok) {
+        setMonthOptions(monthsJson.data.items);
+      }
+
+      if (workLocationsResponse.ok) {
+        setWorkLocationOptions(workLocationsJson.data.items);
+      }
+
+      if (vehicleIdentifiersResponse.ok) {
+        setVehicleIdentifierOptions(vehicleIdentifiersJson.data.items);
+      }
     }
 
-    void loadMonthOptions();
+    void loadFilterOptions();
 
     return () => {
       cancelled = true;
@@ -415,6 +549,46 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
       setActiveFilters((current) => ({ ...current }));
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleToggleBillingStatus(item: ReportItem) {
+    const nextBillingStatus = item.billingStatus === "processed" ? "unprocessed" : "processed";
+
+    setBillingUpdatingId(item.id);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch(`/api/reports/${item.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ billingStatus: nextBillingStatus }),
+      });
+      const json = (await response.json()) as { error: { message: string } | null };
+
+      if (response.status === 401) {
+        router.push("/");
+        return;
+      }
+
+      if (!response.ok) {
+        setErrorMessage(json.error?.message ?? "請求処理の更新に失敗しました。");
+        return;
+      }
+
+      setItems((current) => current.map((currentItem) => (
+        currentItem.id === item.id
+          ? {
+              ...currentItem,
+              billingStatus: nextBillingStatus,
+            }
+          : currentItem
+      )));
+      setSuccessMessage("請求処理を更新しました。");
+    } finally {
+      setBillingUpdatingId(null);
     }
   }
 
@@ -567,6 +741,15 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
     window.location.href = query ? `/api/reports/export.csv?${query}` : "/api/reports/export.csv";
   }
 
+  function handleToggleColumn(column: keyof VisibleColumns) {
+    setVisibleColumns((current) => ({
+      ...current,
+      [column]: !current[column],
+    }));
+  }
+
+  const visibleColumnCount = countVisibleColumns(visibleColumns);
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#f7efe2,#f3e3ce_35%,#efe6db_70%,#f8f4ef_100%)] px-6 py-8 text-(--ink) sm:px-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
@@ -717,13 +900,45 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
             </label>
 
             <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
-              作業コード
+              作業場所
+              <select
+                value={draftFilters.workLocation}
+                onChange={(event) => handleFilterChange("workLocation", event.target.value)}
+                className="h-11 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
+              >
+                <option value="">すべて</option>
+                {workLocationOptions.map((option) => (
+                  <option key={option.id} value={option.name}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
+              登録番号または車体番号
+              <select
+                value={draftFilters.vehicleIdentifier}
+                onChange={(event) => handleFilterChange("vehicleIdentifier", event.target.value)}
+                className="h-11 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
+              >
+                <option value="">すべて</option>
+                {vehicleIdentifierOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
+              作業内容
               <input
                 type="text"
                 value={draftFilters.workCode}
                 onChange={(event) => handleFilterChange("workCode", event.target.value)}
                 className="h-11 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
-                placeholder="W001"
+                placeholder="洗車・内装清掃"
               />
             </label>
 
@@ -737,6 +952,19 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                 <option value="">すべて</option>
                 <option value="new">新規</option>
                 <option value="existing">既存</option>
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
+              請求処理
+              <select
+                value={draftFilters.billingStatus}
+                onChange={(event) => handleFilterChange("billingStatus", event.target.value)}
+                className="h-11 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
+              >
+                <option value="">すべて</option>
+                <option value="unprocessed">未</option>
+                <option value="processed">済</option>
               </select>
             </label>
 
@@ -791,6 +1019,25 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
             </div>
           </div>
 
+          <details className="mb-5 rounded-3xl border border-[#eadfd5] bg-[#fff8f2] px-5 py-4">
+            <summary className="cursor-pointer list-none text-sm font-medium text-(--ink)">
+              表示列を切り替える
+            </summary>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {toggleableColumns.map((column) => (
+                <label key={column.key} className="inline-flex items-center gap-3 text-sm text-(--ink-soft)">
+                  <input
+                    type="checkbox"
+                    checked={visibleColumns[column.key]}
+                    onChange={() => handleToggleColumn(column.key)}
+                    className="h-4 w-4 rounded border border-black/20 accent-(--accent-strong)"
+                  />
+                  <span>{column.label}</span>
+                </label>
+              ))}
+            </div>
+          </details>
+
           <div className="mb-5 flex flex-col gap-3 rounded-3xl border border-[#eadfd5] bg-[#fff8f2] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-medium text-(--ink)">選択中の日報 {selectedCount} 件</p>
@@ -830,10 +1077,10 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
           ) : null}
 
           <div className="overflow-x-auto">
-            <table className="min-w-full border-separate border-spacing-y-3">
+            <table className="min-w-max border-separate border-spacing-y-3">
               <thead>
                 <tr className="text-left text-sm text-(--ink-muted)">
-                  <th className="px-4 py-2">
+                  <th className="px-4 py-2 whitespace-nowrap">
                     <input
                       type="checkbox"
                       checked={allVisibleSelected}
@@ -842,33 +1089,36 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                       className="h-4 w-4 rounded border border-black/20 accent-(--accent-strong)"
                     />
                   </th>
-                  <th className="px-4 py-2">日付</th>
-                  <th className="px-4 py-2">得意先</th>
-                  <th className="px-4 py-2">車種</th>
-                  <th className="px-4 py-2">作業コード</th>
-                  <th className="px-4 py-2">状態</th>
-                  <th className="px-4 py-2">売上</th>
-                  <th className="px-4 py-2">作業分</th>
-                  <th className="px-4 py-2">工数分</th>
-                  <th className="px-4 py-2">移動分</th>
-                  <th className="px-4 py-2">台数</th>
-                  <th className="px-4 py-2">基準分</th>
-                  <th className="px-4 py-2">ポイント</th>
-                  <th className="px-4 py-2">備考</th>
-                  <th className="px-4 py-2">操作</th>
+                  <th className="px-4 py-2 whitespace-nowrap">日付</th>
+                  <th className="px-4 py-2 whitespace-nowrap">得意先</th>
+                  {visibleColumns.carType ? <th className="px-4 py-2 whitespace-nowrap">車種</th> : null}
+                  {visibleColumns.workLocation ? <th className="px-4 py-2 whitespace-nowrap">作業場所</th> : null}
+                  {visibleColumns.vehicleIdentifier ? <th className="px-4 py-2 whitespace-nowrap">登録番号または車体番号</th> : null}
+                  {visibleColumns.workCode ? <th className="px-4 py-2 whitespace-nowrap">作業内容</th> : null}
+                  {visibleColumns.customerStatus ? <th className="px-4 py-2 whitespace-nowrap">状態</th> : null}
+                  {visibleColumns.billingStatus ? <th className="px-4 py-2 whitespace-nowrap">請求処理</th> : null}
+                  {visibleColumns.salesAmount ? <th className="px-4 py-2 whitespace-nowrap">売上</th> : null}
+                  {visibleColumns.workMinutes ? <th className="px-4 py-2 whitespace-nowrap">作業分</th> : null}
+                  {visibleColumns.laborMinutes ? <th className="px-4 py-2 whitespace-nowrap">工数分</th> : null}
+                  {visibleColumns.travelMinutes ? <th className="px-4 py-2 whitespace-nowrap">移動分</th> : null}
+                  {visibleColumns.unitCount ? <th className="px-4 py-2 whitespace-nowrap">台数</th> : null}
+                  {visibleColumns.standardMinutes ? <th className="px-4 py-2 whitespace-nowrap">基準分</th> : null}
+                  {visibleColumns.points ? <th className="px-4 py-2 whitespace-nowrap">ポイント</th> : null}
+                  {visibleColumns.remarks ? <th className="px-4 py-2 whitespace-nowrap">備考</th> : null}
+                  <th className="px-4 py-2 whitespace-nowrap">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={15} className="rounded-3xl border border-dashed border-black/10 px-4 py-10 text-center text-sm text-(--ink-soft)">
+                    <td colSpan={visibleColumnCount} className="rounded-3xl border border-dashed border-black/10 px-4 py-10 text-center text-sm text-(--ink-soft)">
                       {isFetching ? "日報データを読み込んでいます..." : "条件に一致する日報はありません。"}
                     </td>
                   </tr>
                 ) : (
                   items.map((item) => (
                     <tr key={item.id} className="rounded-3xl bg-[#fffdf9] shadow-[0_12px_30px_rgba(76,47,33,0.06)]">
-                      <td className="rounded-l-3xl px-4 py-4 text-sm">
+                      <td className="rounded-l-3xl px-4 py-4 text-sm whitespace-nowrap">
                         <input
                           type="checkbox"
                           checked={selectedReportIdSet.has(item.id)}
@@ -877,23 +1127,37 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                           className="h-4 w-4 rounded border border-black/20 accent-(--accent-strong)"
                         />
                       </td>
-                      <td className="px-4 py-4 text-sm">{item.workDate}</td>
-                      <td className="px-4 py-4 text-sm">
+                      <td className="px-4 py-4 text-sm whitespace-nowrap">{item.workDate}</td>
+                      <td className="px-4 py-4 text-sm whitespace-nowrap">
                         <div className="font-medium">{item.clientName}</div>
                         <div className="text-(--ink-muted)">{item.clientCode}</div>
                       </td>
-                      <td className="px-4 py-4 text-sm">{item.carType ?? "-"}</td>
-                      <td className="px-4 py-4 text-sm">{item.workCode}</td>
-                      <td className="px-4 py-4 text-sm">{formatCustomerStatus(item.customerStatus)}</td>
-                      <td className="px-4 py-4 text-sm">{formatCurrency(item.salesAmount)}</td>
-                      <td className="px-4 py-4 text-sm">{item.workMinutes}</td>
-                      <td className="px-4 py-4 text-sm">{item.laborMinutes}</td>
-                      <td className="px-4 py-4 text-sm">{item.travelMinutes}</td>
-                      <td className="px-4 py-4 text-sm">{item.unitCount}</td>
-                      <td className="px-4 py-4 text-sm">{formatOptionalNumber(item.standardMinutes)}</td>
-                      <td className="px-4 py-4 text-sm">{formatOptionalNumber(item.points)}</td>
-                      <td className="px-4 py-4 text-sm text-(--ink-soft)">{item.remarks ?? "-"}</td>
-                      <td className="rounded-r-3xl px-4 py-4 text-sm">
+                      {visibleColumns.carType ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.carType ?? "-"}</td> : null}
+                      {visibleColumns.workLocation ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.workLocation ?? "-"}</td> : null}
+                      {visibleColumns.vehicleIdentifier ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.vehicleIdentifier ?? "-"}</td> : null}
+                      {visibleColumns.workCode ? <td className="px-4 py-4 text-sm min-w-45">{item.workCode}</td> : null}
+                      {visibleColumns.customerStatus ? <td className="px-4 py-4 text-sm whitespace-nowrap">{formatCustomerStatus(item.customerStatus)}</td> : null}
+                      {visibleColumns.billingStatus ? <td className="px-4 py-4 text-sm whitespace-nowrap">
+                        <label className="inline-flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={item.billingStatus === "processed"}
+                            onChange={() => void handleToggleBillingStatus(item)}
+                            disabled={billingUpdatingId === item.id}
+                            className="h-4 w-4 rounded border border-black/20 accent-(--accent-strong)"
+                          />
+                          <span className="whitespace-nowrap">{billingUpdatingId === item.id ? "更新中..." : formatBillingStatus(item.billingStatus)}</span>
+                        </label>
+                      </td> : null}
+                      {visibleColumns.salesAmount ? <td className="px-4 py-4 text-sm whitespace-nowrap">{formatCurrency(item.salesAmount)}</td> : null}
+                      {visibleColumns.workMinutes ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.workMinutes}</td> : null}
+                      {visibleColumns.laborMinutes ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.laborMinutes}</td> : null}
+                      {visibleColumns.travelMinutes ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.travelMinutes}</td> : null}
+                      {visibleColumns.unitCount ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.unitCount}</td> : null}
+                      {visibleColumns.standardMinutes ? <td className="px-4 py-4 text-sm whitespace-nowrap">{formatOptionalNumber(item.standardMinutes)}</td> : null}
+                      {visibleColumns.points ? <td className="px-4 py-4 text-sm whitespace-nowrap">{formatOptionalNumber(item.points)}</td> : null}
+                      {visibleColumns.remarks ? <td className="px-4 py-4 text-sm text-(--ink-soft) min-w-55">{item.remarks ?? "-"}</td> : null}
+                      <td className="rounded-r-3xl px-4 py-4 text-sm whitespace-nowrap">
                         <div className="flex flex-wrap gap-2">
                           <Link
                             href={`/reports/${item.id}/edit`}

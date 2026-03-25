@@ -438,7 +438,7 @@ function buildLineItems(documentType: InvoiceDocumentType, group: InvoiceClientG
     return {
       id: item.id,
       carType: item.carType ?? "",
-      identifier: item.workCode,
+      identifier: item.vehicleIdentifier ?? "",
       clientName: group.clientName,
       workDescription: workParts.join(" / "),
       amount: formatCurrency(item.salesAmount),
@@ -463,15 +463,27 @@ function buildBottomSummaryRows(group: InvoiceClientGroup, administrator: PdfAdm
   const subtotalValue = group.totalSalesAmount;
   const taxValue = Math.floor(subtotalValue * 0.1);
   const totalValue = subtotalValue + taxValue;
+  const workLocation = joinUniqueValues(group.items.map((item) => item.workLocation));
+  const signerName = joinUniqueValues(group.items.map((item) => item.signerName));
 
   return {
-    workLocation: group.clientName,
+    workLocation,
     workerName: administrator.name,
-    signLabel: "確認済",
+    signLabel: signerName,
     subtotal: formatCurrency(subtotalValue),
     tax: formatCurrency(taxValue),
     total: formatCurrency(totalValue),
   };
+}
+
+function joinUniqueValues(values: Array<string | null>) {
+  const normalizedValues = Array.from(new Set(values.filter((value): value is string => Boolean(value && value.trim())).map((value) => value.trim())));
+
+  if (normalizedValues.length === 0) {
+    return "-";
+  }
+
+  return normalizedValues.join(" / ");
 }
 
 function DocumentPage({
@@ -605,7 +617,7 @@ function DocumentPage({
               <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.workLocation}</Text>
             </View>
             <View style={{ ...styles.bottomLabelCellWide, borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.primary }}>
-              <Text style={{ ...styles.detailText, color: "#ffffff" }}>作業確認(サイン)</Text>
+              <Text style={{ ...styles.detailText, color: "#ffffff" }}>担当者(サイン)</Text>
             </View>
             <View style={{ ...styles.bottomValueCell, borderLeftColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.signLabel}</Text>

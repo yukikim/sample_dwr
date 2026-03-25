@@ -4,35 +4,20 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import type { AuthenticatedAdministrator } from "@/lib/auth";
+import type { ReportMasterConfig } from "@/lib/report-masters";
 import {
-  createReportPayload,
-  initialReportFieldState,
-  ReportForm,
-  reportFieldsFromItem,
-  type ReportFieldState,
-} from "@/app/reports/report-form";
+  ReportMasterForm,
+  createReportMasterPayload,
+  initialReportMasterFieldState,
+  reportMasterFieldsFromItem,
+  type ReportMasterFieldState,
+} from "@/app/report-masters/report-master-form";
 
-type ReportItemResponse = {
+type ReportMasterItemResponse = {
   data: {
     item: {
       id: string;
-      workDate: string;
-      clientCode: string;
-      clientName: string;
-      workMinutes: number;
-      laborMinutes: number;
-      travelMinutes: number;
-      carType: string | null;
-      workLocation: string | null;
-      signerName: string | null;
-      vehicleIdentifier: string | null;
-      workCode: string;
-      customerStatus: string;
-      billingStatus: string;
-      unitCount: number;
-      salesAmount: number;
-      standardMinutes: number | null;
-      points: number | null;
+      name: string;
       remarks: string | null;
     };
   };
@@ -42,15 +27,17 @@ type ReportItemResponse = {
   } | null;
 };
 
-export function ReportEditForm({
+export function ReportMasterEditForm({
   administrator,
-  reportId,
+  config,
+  itemId,
 }: {
   administrator: AuthenticatedAdministrator;
-  reportId: string;
+  config: ReportMasterConfig;
+  itemId: string;
 }) {
   const router = useRouter();
-  const [fields, setFields] = useState<ReportFieldState>(initialReportFieldState);
+  const [fields, setFields] = useState<ReportMasterFieldState>(initialReportMasterFieldState);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [validationDetails, setValidationDetails] = useState<string[]>([]);
@@ -59,12 +46,12 @@ export function ReportEditForm({
   useEffect(() => {
     let cancelled = false;
 
-    async function loadReport() {
+    async function loadItem() {
       setIsLoading(true);
       setErrorMessage(null);
 
-      const response = await fetch(`/api/reports/${reportId}`, { cache: "no-store" });
-      const json = (await response.json()) as ReportItemResponse;
+      const response = await fetch(`${config.apiPath}/${itemId}`, { cache: "no-store" });
+      const json = (await response.json()) as ReportMasterItemResponse;
 
       if (cancelled) {
         return;
@@ -76,28 +63,28 @@ export function ReportEditForm({
       }
 
       if (response.status === 404) {
-        router.push("/reports?status=missing");
+        router.push(`${config.path}?status=missing`);
         return;
       }
 
       if (!response.ok) {
-        setErrorMessage(json.error?.message ?? "日報の取得に失敗しました。");
+        setErrorMessage(json.error?.message ?? `${config.singularLabel}の取得に失敗しました。`);
         setIsLoading(false);
         return;
       }
 
-      setFields(reportFieldsFromItem(json.data.item));
+      setFields(reportMasterFieldsFromItem(json.data.item));
       setIsLoading(false);
     }
 
-    void loadReport();
+    void loadItem();
 
     return () => {
       cancelled = true;
     };
-  }, [reportId, router]);
+  }, [config, itemId, router]);
 
-  function updateField(name: keyof ReportFieldState, value: string) {
+  function updateField(name: keyof ReportMasterFieldState, value: string) {
     setFields((current) => ({
       ...current,
       [name]: value,
@@ -110,14 +97,14 @@ export function ReportEditForm({
     setValidationDetails([]);
 
     startTransition(async () => {
-      const response = await fetch(`/api/reports/${reportId}`, {
+      const response = await fetch(`${config.apiPath}/${itemId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(createReportPayload(fields)),
+        body: JSON.stringify(createReportMasterPayload(fields)),
       });
-      const json = (await response.json()) as ReportItemResponse;
+      const json = (await response.json()) as ReportMasterItemResponse;
 
       if (response.status === 401) {
         router.push("/");
@@ -125,17 +112,17 @@ export function ReportEditForm({
       }
 
       if (response.status === 404) {
-        router.push("/reports?status=missing");
+        router.push(`${config.path}?status=missing`);
         return;
       }
 
       if (!response.ok) {
-        setErrorMessage(json.error?.message ?? "日報の更新に失敗しました。");
+        setErrorMessage(json.error?.message ?? `${config.singularLabel}の更新に失敗しました。`);
         setValidationDetails(json.error?.details ?? []);
         return;
       }
 
-      router.push("/reports?status=updated");
+      router.push(`${config.path}?status=updated`);
       router.refresh();
     });
   }
@@ -144,17 +131,17 @@ export function ReportEditForm({
     return (
       <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#f7efe2,#f3e3ce_35%,#efe6db_70%,#f8f4ef_100%)] px-6 py-8 text-(--ink) sm:px-10">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-center rounded-4xl border border-white/60 bg-white/88 p-10 shadow-[0_20px_60px_rgba(76,47,33,0.10)]">
-          <p className="text-sm text-(--ink-soft)">日報データを読み込んでいます...</p>
+          <p className="text-sm text-(--ink-soft)">{config.singularLabel}データを読み込んでいます...</p>
         </div>
       </main>
     );
   }
 
   return (
-    <ReportForm
+    <ReportMasterForm
       administrator={administrator}
-      title="日報を編集"
-      eyebrow="Edit Daily Work Report"
+      config={config}
+      title={config.editTitle}
       submitLabel="更新する"
       isPending={isPending}
       fields={fields}

@@ -1,4 +1,4 @@
-import { CustomerStatus, Prisma } from "@prisma/client";
+import { BillingStatus, CustomerStatus, Prisma } from "@prisma/client";
 
 export type ReportListQuery = {
   startDate?: string | null;
@@ -6,8 +6,11 @@ export type ReportListQuery = {
   clientCode?: string | null;
   clientName?: string | null;
   carType?: string | null;
+  workLocation?: string | null;
+  vehicleIdentifier?: string | null;
   workCode?: string | null;
   customerStatus?: string | null;
+  billingStatus?: string | null;
   page?: string | null;
   pageSize?: string | null;
 };
@@ -20,8 +23,12 @@ export type ReportInput = {
   laborMinutes?: unknown;
   travelMinutes?: unknown;
   carType?: unknown;
+  workLocation?: unknown;
+  signerName?: unknown;
+  vehicleIdentifier?: unknown;
   workCode?: unknown;
   customerStatus?: unknown;
+  billingStatus?: unknown;
   unitCount?: unknown;
   salesAmount?: unknown;
   standardMinutes?: unknown;
@@ -46,9 +53,13 @@ export type ValidatedReportInput = {
   workMinutes: number;
   laborMinutes: number;
   travelMinutes: number;
-  carType: string | null;
+  carType: string;
+  workLocation: string;
+  signerName: string;
+  vehicleIdentifier: string;
   workCode: string;
   customerStatus: CustomerStatus;
+  billingStatus: BillingStatus;
   unitCount: number;
   salesAmount: Prisma.Decimal;
   standardMinutes: number | null;
@@ -103,6 +114,20 @@ export function buildReportWhere(query: ReportListQuery): Prisma.DailyWorkReport
     };
   }
 
+  if (query.workLocation?.trim()) {
+    where.workLocation = {
+      contains: query.workLocation.trim(),
+      mode: "insensitive",
+    };
+  }
+
+  if (query.vehicleIdentifier?.trim()) {
+    where.vehicleIdentifier = {
+      contains: query.vehicleIdentifier.trim(),
+      mode: "insensitive",
+    };
+  }
+
   if (query.workCode?.trim()) {
     where.workCode = {
       contains: query.workCode.trim(),
@@ -115,6 +140,14 @@ export function buildReportWhere(query: ReportListQuery): Prisma.DailyWorkReport
 
     if (customerStatus) {
       where.customerStatus = customerStatus;
+    }
+  }
+
+  if (query.billingStatus) {
+    const billingStatus = parseBillingStatus(query.billingStatus);
+
+    if (billingStatus) {
+      where.billingStatus = billingStatus;
     }
   }
 
@@ -142,6 +175,10 @@ export function validateCreateReportInput(input: ReportInput): ValidationSuccess
   const workDate = parseDate(input.workDate);
   const clientCode = parseRequiredString(input.clientCode, "clientCode", errors);
   const clientName = parseRequiredString(input.clientName, "clientName", errors);
+  const carType = parseRequiredString(input.carType, "carType", errors);
+  const workLocation = parseRequiredString(input.workLocation, "workLocation", errors);
+  const signerName = parseRequiredString(input.signerName, "signerName", errors);
+  const vehicleIdentifier = parseRequiredString(input.vehicleIdentifier, "vehicleIdentifier", errors);
   const workCode = parseRequiredString(input.workCode, "workCode", errors);
   const workMinutes = parseRequiredNonNegativeInt(input.workMinutes, "workMinutes", errors);
   const laborMinutes = parseRequiredNonNegativeInt(input.laborMinutes, "laborMinutes", errors);
@@ -149,6 +186,7 @@ export function validateCreateReportInput(input: ReportInput): ValidationSuccess
   const unitCount = parseRequiredNonNegativeInt(input.unitCount, "unitCount", errors);
   const salesAmount = parseRequiredDecimal(input.salesAmount, "salesAmount", errors);
   const customerStatus = parseCustomerStatus(input.customerStatus);
+  const billingStatus = parseBillingStatus(input.billingStatus ?? BillingStatus.unprocessed);
   const standardMinutes = parseOptionalNonNegativeInt(input.standardMinutes, "standardMinutes", errors);
   const points = parseOptionalDecimal(input.points, "points", errors);
 
@@ -160,7 +198,11 @@ export function validateCreateReportInput(input: ReportInput): ValidationSuccess
     errors.push("customerStatus must be either 'new' or 'existing'.");
   }
 
-  if (errors.length > 0 || !workDate || !customerStatus) {
+  if (!billingStatus) {
+    errors.push("billingStatus must be either 'unprocessed' or 'processed'.");
+  }
+
+  if (errors.length > 0 || !workDate || !customerStatus || !billingStatus) {
     return { data: null, errors };
   }
 
@@ -172,9 +214,13 @@ export function validateCreateReportInput(input: ReportInput): ValidationSuccess
       workMinutes,
       laborMinutes,
       travelMinutes,
-      carType: parseOptionalString(input.carType),
+      carType,
+      workLocation,
+      signerName,
+      vehicleIdentifier,
       workCode,
       customerStatus,
+      billingStatus,
       unitCount,
       salesAmount,
       standardMinutes,
@@ -227,7 +273,19 @@ export function validateUpdateReportInput(input: ReportInput): ValidationSuccess
   }
 
   if (input.carType !== undefined) {
-    data.carType = parseOptionalString(input.carType);
+    data.carType = parseRequiredString(input.carType, "carType", errors);
+  }
+
+  if (input.workLocation !== undefined) {
+    data.workLocation = parseRequiredString(input.workLocation, "workLocation", errors);
+  }
+
+  if (input.signerName !== undefined) {
+    data.signerName = parseRequiredString(input.signerName, "signerName", errors);
+  }
+
+  if (input.vehicleIdentifier !== undefined) {
+    data.vehicleIdentifier = parseRequiredString(input.vehicleIdentifier, "vehicleIdentifier", errors);
   }
 
   if (input.workCode !== undefined) {
@@ -241,6 +299,16 @@ export function validateUpdateReportInput(input: ReportInput): ValidationSuccess
       errors.push("customerStatus must be either 'new' or 'existing'.");
     } else {
       data.customerStatus = customerStatus;
+    }
+  }
+
+  if (input.billingStatus !== undefined) {
+    const billingStatus = parseBillingStatus(input.billingStatus);
+
+    if (!billingStatus) {
+      errors.push("billingStatus must be either 'unprocessed' or 'processed'.");
+    } else {
+      data.billingStatus = billingStatus;
     }
   }
 
@@ -280,8 +348,12 @@ export function serializeReport(report: {
   laborMinutes: number;
   travelMinutes: number;
   carType: string | null;
+  workLocation: string | null;
+  signerName: string | null;
+  vehicleIdentifier: string | null;
   workCode: string;
   customerStatus: CustomerStatus;
+  billingStatus: BillingStatus;
   unitCount: number;
   salesAmount: Prisma.Decimal;
   standardMinutes: number | null;
@@ -300,8 +372,12 @@ export function serializeReport(report: {
     laborMinutes: report.laborMinutes,
     travelMinutes: report.travelMinutes,
     carType: report.carType,
+    workLocation: report.workLocation,
+    signerName: report.signerName,
+    vehicleIdentifier: report.vehicleIdentifier,
     workCode: report.workCode,
     customerStatus: report.customerStatus,
+    billingStatus: report.billingStatus,
     unitCount: report.unitCount,
     salesAmount: Number(report.salesAmount),
     standardMinutes: report.standardMinutes,
@@ -326,6 +402,24 @@ function parseCustomerStatus(value: unknown) {
 
   if (normalizedValue === CustomerStatus.existing) {
     return CustomerStatus.existing;
+  }
+
+  return null;
+}
+
+function parseBillingStatus(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+
+  if (normalizedValue === BillingStatus.unprocessed) {
+    return BillingStatus.unprocessed;
+  }
+
+  if (normalizedValue === BillingStatus.processed) {
+    return BillingStatus.processed;
   }
 
   return null;

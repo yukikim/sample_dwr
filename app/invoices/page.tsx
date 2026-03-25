@@ -267,7 +267,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
                             }}
                           >
                             <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{item?.carType ?? ""}</div>
-                            <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{item?.workCode ?? ""}</div>
+                            <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{item?.vehicleIdentifier ?? ""}</div>
                             <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{selection.groups[0]?.clientName ?? ""}</div>
                             <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{item ? `${item.workCode} / 作業 ${item.workMinutes}分` : ""}</div>
                             <div className="border-r px-2 py-2 text-right" style={{ borderColor: previewTheme(documentType).primary }}>{item ? formatCurrency(item.salesAmount) : ""}</div>
@@ -281,9 +281,9 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
                       <div>
                         <div className="grid grid-cols-[74px_1fr_108px_1fr] border-b" style={{ borderColor: previewTheme(documentType).primary }}>
                           <div className="px-2 py-2" style={{ backgroundColor: previewTheme(documentType).soft }}>作業場所</div>
-                          <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{selection.groups[0]?.clientName ?? ""}</div>
-                          <div className="border-l px-2 py-2 text-white" style={{ borderColor: previewTheme(documentType).primary, backgroundColor: previewTheme(documentType).primary }}>作業確認(サイン)</div>
-                          <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>確認済</div>
+                          <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{selection.groups[0]?.items.map((item) => item.workLocation).filter(Boolean).filter((value, index, array) => array.indexOf(value) === index).join(" / ") || "-"}</div>
+                          <div className="border-l px-2 py-2 text-white" style={{ borderColor: previewTheme(documentType).primary, backgroundColor: previewTheme(documentType).primary }}>担当者(サイン)</div>
+                          <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{selection.groups[0]?.items.map((item) => item.signerName).filter(Boolean).filter((value, index, array) => array.indexOf(value) === index).join(" / ") || "-"}</div>
                         </div>
                         <div className="grid grid-cols-[74px_1fr_108px_1fr]" style={{ borderColor: previewTheme(documentType).primary }}>
                           <div className="px-2 py-2" style={{ backgroundColor: previewTheme(documentType).soft }}>記入者(作業者)</div>

@@ -1,10 +1,17 @@
 import "dotenv/config";
 
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client";
+import prismaPackage from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 import { INITIAL_CLIENTS } from "./seed-data/clients.mjs";
+import {
+  INITIAL_CAR_TYPES,
+  INITIAL_WORK_CONTENTS,
+  INITIAL_WORK_LOCATIONS,
+} from "./seed-data/report-masters.mjs";
+
+const { PrismaClient } = prismaPackage;
 
 function readRequiredEnv(name) {
   const value = process.env[name]?.trim();
@@ -75,7 +82,40 @@ async function main() {
       ),
     );
 
+    const seededCarTypes = await Promise.all(
+      INITIAL_CAR_TYPES.map((name) =>
+        prisma.carTypeMaster.upsert({
+          where: { name },
+          update: {},
+          create: { name },
+        }),
+      ),
+    );
+
+    const seededWorkLocations = await Promise.all(
+      INITIAL_WORK_LOCATIONS.map((name) =>
+        prisma.workLocationMaster.upsert({
+          where: { name },
+          update: {},
+          create: { name },
+        }),
+      ),
+    );
+
+    const seededWorkContents = await Promise.all(
+      INITIAL_WORK_CONTENTS.map((name) =>
+        prisma.workContentMaster.upsert({
+          where: { name },
+          update: {},
+          create: { name },
+        }),
+      ),
+    );
+
     console.log(`Upserted initial clients: ${seededClients.length}`);
+    console.log(`Upserted car types: ${seededCarTypes.length}`);
+    console.log(`Upserted work locations: ${seededWorkLocations.length}`);
+    console.log(`Upserted work contents: ${seededWorkContents.length}`);
   } finally {
     await prisma.$disconnect();
   }

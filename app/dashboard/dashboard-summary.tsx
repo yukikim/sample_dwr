@@ -172,6 +172,24 @@ export function DashboardSummary() {
             >
               得意先管理
             </Link>
+            <Link
+              href="/car-types"
+              className="inline-flex h-10 items-center justify-center rounded-full border border-black/10 bg-white px-4 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3"
+            >
+              車種管理
+            </Link>
+            <Link
+              href="/work-locations"
+              className="inline-flex h-10 items-center justify-center rounded-full border border-black/10 bg-white px-4 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3"
+            >
+              作業場所管理
+            </Link>
+            <Link
+              href="/work-contents"
+              className="inline-flex h-10 items-center justify-center rounded-full border border-black/10 bg-white px-4 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3"
+            >
+              作業内容管理
+            </Link>
           </div>
         </article>
       </section>

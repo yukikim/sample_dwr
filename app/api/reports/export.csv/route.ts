@@ -1,6 +1,6 @@
 import { apiError, requireAuthenticatedAdministrator } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { buildReportExportFileName, formatCustomerStatusLabel } from "@/lib/report-export";
+import { buildReportExportFileName, formatBillingStatusLabel, formatCustomerStatusLabel } from "@/lib/report-export";
 import { buildReportOrderBy, buildReportWhere, serializeReport } from "@/lib/reports";
 
 export const runtime = "nodejs";
@@ -11,8 +11,12 @@ const CSV_HEADERS = [
   "日付",
   "得意先",
   "車種",
-  "作業コード",
+  "作業場所",
+  "登録番号または車体番号",
+  "作業内容",
+  "担当者(サイン)",
   "状態",
+  "請求処理",
   "売上",
   "作業分",
   "工数分",
@@ -46,8 +50,12 @@ function buildCsvContent(reports: SerializedReport[]) {
     report.workDate,
     formatClientLabel(report),
     report.carType,
+    report.workLocation,
+    report.vehicleIdentifier,
     report.workCode,
+    report.signerName,
     formatCustomerStatusLabel(report.customerStatus),
+    formatBillingStatusLabel(report.billingStatus),
     report.salesAmount,
     report.workMinutes,
     report.laborMinutes,
@@ -77,8 +85,11 @@ export async function GET(request: Request) {
     clientCode: searchParams.get("clientCode"),
     clientName: searchParams.get("clientName"),
     carType: searchParams.get("carType"),
+    workLocation: searchParams.get("workLocation"),
+    vehicleIdentifier: searchParams.get("vehicleIdentifier"),
     workCode: searchParams.get("workCode"),
     customerStatus: searchParams.get("customerStatus"),
+    billingStatus: searchParams.get("billingStatus"),
   });
 
   const reports = await prisma.dailyWorkReport.findMany({

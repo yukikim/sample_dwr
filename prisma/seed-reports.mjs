@@ -1,9 +1,16 @@
 import "dotenv/config";
 
 import { PrismaPg } from "@prisma/adapter-pg";
-import { CustomerStatus, PrismaClient } from "@prisma/client";
+import prismaPackage from "@prisma/client";
 
 import { INITIAL_CLIENTS } from "./seed-data/clients.mjs";
+import {
+  INITIAL_CAR_TYPES,
+  INITIAL_WORK_CONTENTS,
+  INITIAL_WORK_LOCATIONS,
+} from "./seed-data/report-masters.mjs";
+
+const { BillingStatus, CustomerStatus, PrismaClient } = prismaPackage;
 
 const DUMMY_REPORT_MARKER = "[seed:dummy-reports-v1]";
 const SEED_MONTHS = 3;
@@ -14,14 +21,16 @@ const CLIENTS = INITIAL_CLIENTS.map((client) => ({
 }));
 
 const WORK_PATTERNS = [
-  { code: "W001", label: "洗車・内装清掃", baseMinutes: 70, laborRatio: 0.85, baseSales: 7800, pointsRate: 0.12 },
-  { code: "W002", label: "定期点検", baseMinutes: 95, laborRatio: 0.92, baseSales: 12800, pointsRate: 0.18 },
-  { code: "W003", label: "コーティング補修", baseMinutes: 120, laborRatio: 0.95, baseSales: 16500, pointsRate: 0.24 },
-  { code: "W004", label: "納車前仕上げ", baseMinutes: 80, laborRatio: 0.88, baseSales: 9800, pointsRate: 0.16 },
-  { code: "W005", label: "外装ポリッシュ", baseMinutes: 145, laborRatio: 0.93, baseSales: 19800, pointsRate: 0.28 },
+  { name: "洗車・内装清掃", baseMinutes: 70, laborRatio: 0.85, baseSales: 7800, pointsRate: 0.12 },
+  { name: "定期点検", baseMinutes: 95, laborRatio: 0.92, baseSales: 12800, pointsRate: 0.18 },
+  { name: "コーティング補修", baseMinutes: 120, laborRatio: 0.95, baseSales: 16500, pointsRate: 0.24 },
+  { name: "納車前仕上げ", baseMinutes: 80, laborRatio: 0.88, baseSales: 9800, pointsRate: 0.16 },
+  { name: "外装ポリッシュ", baseMinutes: 145, laborRatio: 0.93, baseSales: 19800, pointsRate: 0.28 },
 ];
 
-const CAR_TYPES = ["軽自動車", "普通車", "SUV", "ミニバン", "商用バン"];
+const CAR_TYPES = INITIAL_CAR_TYPES;
+const WORK_LOCATIONS = INITIAL_WORK_LOCATIONS;
+const WORK_CONTENTS = INITIAL_WORK_CONTENTS;
 const REMARK_TEMPLATES = [
   "納車予定に合わせて前倒し対応",
   "午前中に引取、午後返却",
@@ -104,11 +113,15 @@ function buildReportRecord({ administratorId, workDate, sequence }) {
   const travelMinutes = randomInt(rng, 10, 45);
   const standardMinutes = Math.max(30, Math.round(pattern.baseMinutes * (0.9 + rng() * 0.25)));
   const carType = pick(rng, CAR_TYPES);
+  const workLocation = pick(rng, WORK_LOCATIONS);
+  const workContent = pick(rng, WORK_CONTENTS);
   const salesAmount = pattern.baseSales * unitCount + randomInt(rng, -1200, 2400);
   const points = Number((salesAmount * pattern.pointsRate / 100).toFixed(2));
   const createdAt = new Date(workDate.getTime() + randomInt(rng, 8, 17) * 60 * 60 * 1000);
   const updatedAt = new Date(createdAt.getTime() + randomInt(rng, 10, 180) * 60 * 1000);
-  const remark = `${DUMMY_REPORT_MARKER} ${pattern.label} / ${pick(rng, REMARK_TEMPLATES)}`;
+  const signerName = pick(rng, ["山田 太郎", "鈴木 一郎", "佐藤 花子", "高橋 健"]);
+  const vehicleIdentifier = `${pick(rng, ["品川", "習志野", "成田", "土浦"])}${randomInt(rng, 100, 599)}あ${String(randomInt(rng, 10, 99)).padStart(2, "0")}-${String(randomInt(rng, 10, 99)).padStart(2, "0")}`;
+  const remark = `${DUMMY_REPORT_MARKER} ${pattern.name} / ${pick(rng, REMARK_TEMPLATES)}`;
 
   return {
     workDate,
@@ -118,8 +131,12 @@ function buildReportRecord({ administratorId, workDate, sequence }) {
     laborMinutes,
     travelMinutes,
     carType,
-    workCode: pattern.code,
+    workLocation,
+    signerName,
+    vehicleIdentifier,
+    workCode: workContent,
     customerStatus,
+    billingStatus: BillingStatus.unprocessed,
     unitCount,
     salesAmount,
     standardMinutes,

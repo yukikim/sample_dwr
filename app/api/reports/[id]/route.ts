@@ -78,6 +78,45 @@ export async function PATCH(request: Request, context: RouteContext) {
     validatedInput.data.clientName = client.name;
   }
 
+  if (validatedInput.data.carType !== undefined) {
+    const carTypeMaster = await prisma.carTypeMaster.findUnique({
+      where: { name: validatedInput.data.carType },
+      select: { name: true },
+    });
+
+    if (!carTypeMaster) {
+      return apiError({ code: "CAR_TYPE_NOT_FOUND", message: "指定された車種が見つかりません。" }, { status: 400 });
+    }
+
+    validatedInput.data.carType = carTypeMaster.name;
+  }
+
+  if (validatedInput.data.workLocation !== undefined) {
+    const workLocationMaster = await prisma.workLocationMaster.findUnique({
+      where: { name: validatedInput.data.workLocation },
+      select: { name: true },
+    });
+
+    if (!workLocationMaster) {
+      return apiError({ code: "WORK_LOCATION_NOT_FOUND", message: "指定された作業場所が見つかりません。" }, { status: 400 });
+    }
+
+    validatedInput.data.workLocation = workLocationMaster.name;
+  }
+
+  if (validatedInput.data.workCode !== undefined) {
+    const workContentMaster = await prisma.workContentMaster.findUnique({
+      where: { name: validatedInput.data.workCode },
+      select: { name: true },
+    });
+
+    if (!workContentMaster) {
+      return apiError({ code: "WORK_CONTENT_NOT_FOUND", message: "指定された作業内容が見つかりません。" }, { status: 400 });
+    }
+
+    validatedInput.data.workCode = workContentMaster.name;
+  }
+
   const report = await prisma.dailyWorkReport.update({
     where: { id },
     data: validatedInput.data,

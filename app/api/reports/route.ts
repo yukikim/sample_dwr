@@ -23,8 +23,11 @@ export async function GET(request: Request) {
     clientCode: searchParams.get("clientCode"),
     clientName: searchParams.get("clientName"),
     carType: searchParams.get("carType"),
+    workLocation: searchParams.get("workLocation"),
+    vehicleIdentifier: searchParams.get("vehicleIdentifier"),
     workCode: searchParams.get("workCode"),
     customerStatus: searchParams.get("customerStatus"),
+    billingStatus: searchParams.get("billingStatus"),
     page: searchParams.get("page"),
     pageSize: searchParams.get("pageSize"),
   };
@@ -79,10 +82,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const client = await prisma.client.findUnique({
-    where: { code: validatedInput.data.clientCode },
-    select: { code: true, name: true },
-  });
+  const [client, carTypeMaster, workLocationMaster, workContentMaster] = await Promise.all([
+    prisma.client.findUnique({ where: { code: validatedInput.data.clientCode }, select: { code: true, name: true } }),
+    prisma.carTypeMaster.findUnique({ where: { name: validatedInput.data.carType }, select: { name: true } }),
+    prisma.workLocationMaster.findUnique({ where: { name: validatedInput.data.workLocation }, select: { name: true } }),
+    prisma.workContentMaster.findUnique({ where: { name: validatedInput.data.workCode }, select: { name: true } }),
+  ]);
 
   if (!client) {
     return apiError(
@@ -94,11 +99,26 @@ export async function POST(request: Request) {
     );
   }
 
+  if (!carTypeMaster) {
+    return apiError({ code: "CAR_TYPE_NOT_FOUND", message: "指定された車種が見つかりません。" }, { status: 400 });
+  }
+
+  if (!workLocationMaster) {
+    return apiError({ code: "WORK_LOCATION_NOT_FOUND", message: "指定された作業場所が見つかりません。" }, { status: 400 });
+  }
+
+  if (!workContentMaster) {
+    return apiError({ code: "WORK_CONTENT_NOT_FOUND", message: "指定された作業内容が見つかりません。" }, { status: 400 });
+  }
+
   const report = await prisma.dailyWorkReport.create({
     data: {
       ...validatedInput.data,
       clientCode: client.code,
       clientName: client.name,
+      carType: carTypeMaster.name,
+      workLocation: workLocationMaster.name,
+      workCode: workContentMaster.name,
       createdBy: administrator.id,
     },
   });

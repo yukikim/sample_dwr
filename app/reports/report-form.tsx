@@ -11,6 +11,11 @@ type ClientOption = {
   name: string;
 };
 
+type MasterOption = {
+  id: string;
+  name: string;
+};
+
 export type ReportFieldState = {
   workDate: string;
   clientCode: string;
@@ -19,8 +24,12 @@ export type ReportFieldState = {
   laborMinutes: string;
   travelMinutes: string;
   carType: string;
+  workLocation: string;
+  signerName: string;
+  vehicleIdentifier: string;
   workCode: string;
   customerStatus: string;
+  billingStatus: string;
   unitCount: string;
   salesAmount: string;
   standardMinutes: string;
@@ -36,8 +45,12 @@ export const initialReportFieldState: ReportFieldState = {
   laborMinutes: "0",
   travelMinutes: "0",
   carType: "",
+  workLocation: "",
+  signerName: "",
+  vehicleIdentifier: "",
   workCode: "",
   customerStatus: "new",
+  billingStatus: "unprocessed",
   unitCount: "1",
   salesAmount: "0",
   standardMinutes: "",
@@ -51,7 +64,6 @@ export function createReportPayload(fields: ReportFieldState) {
     standardMinutes: fields.standardMinutes === "" ? null : fields.standardMinutes,
     points: fields.points === "" ? null : fields.points,
     remarks: fields.remarks === "" ? null : fields.remarks,
-    carType: fields.carType === "" ? null : fields.carType,
   };
 }
 
@@ -63,8 +75,12 @@ export function reportFieldsFromItem(item: {
   laborMinutes: number;
   travelMinutes: number;
   carType: string | null;
+  workLocation: string | null;
+  signerName: string | null;
+  vehicleIdentifier: string | null;
   workCode: string;
   customerStatus: string;
+  billingStatus: string;
   unitCount: number;
   salesAmount: number;
   standardMinutes: number | null;
@@ -79,8 +95,12 @@ export function reportFieldsFromItem(item: {
     laborMinutes: String(item.laborMinutes),
     travelMinutes: String(item.travelMinutes),
     carType: item.carType ?? "",
+    workLocation: item.workLocation ?? "",
+    signerName: item.signerName ?? "",
+    vehicleIdentifier: item.vehicleIdentifier ?? "",
     workCode: item.workCode,
     customerStatus: item.customerStatus,
+    billingStatus: item.billingStatus,
     unitCount: String(item.unitCount),
     salesAmount: String(item.salesAmount),
     standardMinutes: item.standardMinutes === null ? "" : String(item.standardMinutes),
@@ -115,42 +135,61 @@ export function ReportForm({
   onSubmit,
 }: ReportFormProps) {
   const [clientOptions, setClientOptions] = useState<ClientOption[]>([]);
-  const [isClientLoading, setIsClientLoading] = useState(true);
-  const [clientLoadError, setClientLoadError] = useState<string | null>(null);
+  const [carTypeOptions, setCarTypeOptions] = useState<MasterOption[]>([]);
+  const [workLocationOptions, setWorkLocationOptions] = useState<MasterOption[]>([]);
+  const [workContentOptions, setWorkContentOptions] = useState<MasterOption[]>([]);
+  const [isReferenceLoading, setIsReferenceLoading] = useState(true);
+  const [referenceLoadError, setReferenceLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadClients() {
-      setIsClientLoading(true);
-      setClientLoadError(null);
+    async function loadReferenceData() {
+      setIsReferenceLoading(true);
+      setReferenceLoadError(null);
 
-      const response = await fetch("/api/clients", { cache: "no-store" });
-      const json = (await response.json()) as {
-        data?: {
-          items?: ClientOption[];
-        };
-        error?: {
-          message?: string;
-        } | null;
-      };
+      const [clientsResponse, carTypesResponse, workLocationsResponse, workContentsResponse] = await Promise.all([
+        fetch("/api/clients", { cache: "no-store" }),
+        fetch("/api/car-types", { cache: "no-store" }),
+        fetch("/api/work-locations", { cache: "no-store" }),
+        fetch("/api/work-contents", { cache: "no-store" }),
+      ]);
+
+      const [clientsJson, carTypesJson, workLocationsJson, workContentsJson] = await Promise.all([
+        clientsResponse.json() as Promise<{ data?: { items?: ClientOption[] }; error?: { message?: string } | null }>,
+        carTypesResponse.json() as Promise<{ data?: { items?: MasterOption[] }; error?: { message?: string } | null }>,
+        workLocationsResponse.json() as Promise<{ data?: { items?: MasterOption[] }; error?: { message?: string } | null }>,
+        workContentsResponse.json() as Promise<{ data?: { items?: MasterOption[] }; error?: { message?: string } | null }>,
+      ]);
 
       if (cancelled) {
         return;
       }
 
-      if (!response.ok) {
+      if (!clientsResponse.ok || !carTypesResponse.ok || !workLocationsResponse.ok || !workContentsResponse.ok) {
         setClientOptions([]);
-        setClientLoadError(json.error?.message ?? "得意先一覧の取得に失敗しました。");
-        setIsClientLoading(false);
+        setCarTypeOptions([]);
+        setWorkLocationOptions([]);
+        setWorkContentOptions([]);
+        setReferenceLoadError(
+          clientsJson.error?.message
+            ?? carTypesJson.error?.message
+            ?? workLocationsJson.error?.message
+            ?? workContentsJson.error?.message
+            ?? "マスタ一覧の取得に失敗しました。",
+        );
+        setIsReferenceLoading(false);
         return;
       }
 
-      setClientOptions(json.data?.items ?? []);
-      setIsClientLoading(false);
+      setClientOptions(clientsJson.data?.items ?? []);
+      setCarTypeOptions(carTypesJson.data?.items ?? []);
+      setWorkLocationOptions(workLocationsJson.data?.items ?? []);
+      setWorkContentOptions(workContentsJson.data?.items ?? []);
+      setIsReferenceLoading(false);
     }
 
-    void loadClients();
+    void loadReferenceData();
 
     return () => {
       cancelled = true;
@@ -181,6 +220,18 @@ export function ReportForm({
 
   const shouldShowFallbackOption =
     fields.clientCode !== "" && !clientOptions.some((option) => option.code === fields.clientCode) && fields.clientName !== "";
+
+  const shouldShowCarTypeFallbackOption = fields.carType !== "" && !carTypeOptions.some((option) => option.name === fields.carType);
+  const shouldShowWorkLocationFallbackOption = fields.workLocation !== "" && !workLocationOptions.some((option) => option.name === fields.workLocation);
+  const shouldShowWorkContentFallbackOption = fields.workCode !== "" && !workContentOptions.some((option) => option.name === fields.workCode);
+  const missingMasterLabels = [
+    clientOptions.length === 0 ? "得意先" : null,
+    carTypeOptions.length === 0 ? "車種" : null,
+    workLocationOptions.length === 0 ? "作業場所" : null,
+    workContentOptions.length === 0 ? "作業内容" : null,
+  ].filter((value): value is string => value !== null);
+  const isReferenceReady =
+    clientOptions.length > 0 && carTypeOptions.length > 0 && workLocationOptions.length > 0 && workContentOptions.length > 0;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#f7efe2,#f3e3ce_35%,#efe6db_70%,#f8f4ef_100%)] px-6 py-8 text-(--ink) sm:px-10">
@@ -224,6 +275,18 @@ export function ReportForm({
             </label>
 
             <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
+              請求処理
+              <select
+                value={fields.billingStatus}
+                onChange={(event) => onFieldChange("billingStatus", event.target.value)}
+                className="h-12 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
+              >
+                <option value="unprocessed">未</option>
+                <option value="processed">済</option>
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
               得意先コード
               <input
                 type="text"
@@ -242,7 +305,7 @@ export function ReportForm({
                 onChange={(event) => handleClientSelection(event.target.value)}
                 required
                 className="h-12 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
-                disabled={isClientLoading || clientOptions.length === 0}
+                disabled={isReferenceLoading || clientOptions.length === 0}
               >
                 <option value="">得意先を選択してください</option>
                 {shouldShowFallbackOption ? (
@@ -258,25 +321,71 @@ export function ReportForm({
 
             <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
               車種
-              <input
-                type="text"
+              <select
                 value={fields.carType}
                 onChange={(event) => onFieldChange("carType", event.target.value)}
+                required
                 className="h-12 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
-                placeholder="普通車"
+                disabled={isReferenceLoading || carTypeOptions.length === 0}
+              >
+                <option value="">車種を選択してください</option>
+                {shouldShowCarTypeFallbackOption ? <option value={fields.carType}>{fields.carType}</option> : null}
+                {carTypeOptions.map((option) => (
+                  <option key={option.id} value={option.name}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
+              作業場所
+              <select
+                value={fields.workLocation}
+                onChange={(event) => onFieldChange("workLocation", event.target.value)}
+                required
+                className="h-12 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
+                disabled={isReferenceLoading || workLocationOptions.length === 0}
+              >
+                <option value="">作業場所を選択してください</option>
+                {shouldShowWorkLocationFallbackOption ? <option value={fields.workLocation}>{fields.workLocation}</option> : null}
+                {workLocationOptions.map((option) => (
+                  <option key={option.id} value={option.name}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
+              登録番号または車体番号
+              <input
+                type="text"
+                value={fields.vehicleIdentifier}
+                onChange={(event) => onFieldChange("vehicleIdentifier", event.target.value)}
+                required
+                className="h-12 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
+                placeholder="品川500あ12-34"
               />
             </label>
 
             <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
-              作業コード
-              <input
-                type="text"
+              作業内容
+              <select
                 value={fields.workCode}
                 onChange={(event) => onFieldChange("workCode", event.target.value)}
                 required
                 className="h-12 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
-                placeholder="W001"
-              />
+                disabled={isReferenceLoading || workContentOptions.length === 0}
+              >
+                <option value="">作業内容を選択してください</option>
+                {shouldShowWorkContentFallbackOption ? <option value={fields.workCode}>{fields.workCode}</option> : null}
+                {workContentOptions.map((option) => (
+                  <option key={option.id} value={option.name}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
@@ -289,6 +398,18 @@ export function ReportForm({
                 <option value="new">新規</option>
                 <option value="existing">既存</option>
               </select>
+            </label>
+
+            <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
+              担当者(サイン)
+              <input
+                type="text"
+                value={fields.signerName}
+                onChange={(event) => onFieldChange("signerName", event.target.value)}
+                required
+                className="h-12 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
+                placeholder="山田 太郎"
+              />
             </label>
 
             <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
@@ -399,22 +520,22 @@ export function ReportForm({
               </div>
             ) : null}
 
-            {clientLoadError ? (
+            {referenceLoadError ? (
               <div className="md:col-span-2 rounded-2xl border border-[#e7b4ab] bg-[#fff3f0] px-4 py-4 text-sm text-[#8e2c18]">
-                {clientLoadError}
+                {referenceLoadError}
               </div>
             ) : null}
 
-            {!isClientLoading && clientOptions.length === 0 ? (
+            {!isReferenceLoading && missingMasterLabels.length > 0 ? (
               <div className="md:col-span-2 rounded-2xl border border-[#ead9bf] bg-[#fff9ee] px-4 py-4 text-sm text-[#7b5a1c]">
-                登録済みの得意先がありません。先に得意先マスタを登録してください。
+                登録済みマスタが不足しています。先に {missingMasterLabels.join("、")} を登録してください。
               </div>
             ) : null}
 
             <div className="flex flex-wrap gap-3 md:col-span-2">
               <button
                 type="submit"
-                disabled={isPending || isClientLoading || clientOptions.length === 0 || fields.clientCode === ""}
+                disabled={isPending || isReferenceLoading || !isReferenceReady || fields.clientCode === ""}
                 className="inline-flex h-12 items-center justify-center rounded-full bg-(--accent-strong) px-6 text-sm font-semibold text-white transition hover:bg-(--accent-deep) disabled:opacity-70"
               >
                 {isPending ? "送信中..." : submitLabel}
@@ -424,6 +545,24 @@ export function ReportForm({
                 className="inline-flex h-12 items-center justify-center rounded-full border border-black/10 bg-white px-6 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3"
               >
                 得意先を追加
+              </Link>
+              <Link
+                href="/car-types/new"
+                className="inline-flex h-12 items-center justify-center rounded-full border border-black/10 bg-white px-6 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3"
+              >
+                車種を追加
+              </Link>
+              <Link
+                href="/work-locations/new"
+                className="inline-flex h-12 items-center justify-center rounded-full border border-black/10 bg-white px-6 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3"
+              >
+                作業場所を追加
+              </Link>
+              <Link
+                href="/work-contents/new"
+                className="inline-flex h-12 items-center justify-center rounded-full border border-black/10 bg-white px-6 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3"
+              >
+                作業内容を追加
               </Link>
               <Link
                 href="/reports"

@@ -14,8 +14,11 @@ export function buildReportExportFileName(searchParams: URLSearchParams, extensi
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
   const clientCode = searchParams.get("clientCode");
+  const workLocation = searchParams.get("workLocation");
+  const vehicleIdentifier = searchParams.get("vehicleIdentifier");
   const workCode = searchParams.get("workCode");
   const customerStatus = searchParams.get("customerStatus");
+  const billingStatus = searchParams.get("billingStatus");
   const clientName = searchParams.get("clientName");
   const carType = searchParams.get("carType");
 
@@ -37,8 +40,20 @@ export function buildReportExportFileName(searchParams: URLSearchParams, extensi
     parts.push(`status-${customerStatus}`);
   }
 
+  if (billingStatus === "processed" || billingStatus === "unprocessed") {
+    parts.push(`billing-${billingStatus}`);
+  }
+
   if (carType) {
     parts.push(`car-${sanitizeFileNamePart(carType)}`);
+  }
+
+  if (workLocation) {
+    parts.push(`location-${sanitizeFileNamePart(workLocation)}`);
+  }
+
+  if (vehicleIdentifier) {
+    parts.push(`vehicle-${sanitizeFileNamePart(vehicleIdentifier)}`);
   }
 
   if (parts.length === 2) {
@@ -58,6 +73,18 @@ export function formatCustomerStatusLabel(value: string) {
 
   if (value === "existing") {
     return "既存";
+  }
+
+  return value;
+}
+
+export function formatBillingStatusLabel(value: string) {
+  if (value === "processed") {
+    return "済";
+  }
+
+  if (value === "unprocessed") {
+    return "未";
   }
 
   return value;
