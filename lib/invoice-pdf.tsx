@@ -13,7 +13,7 @@ import {
 } from "@react-pdf/renderer";
 
 import { getInvoiceDocumentLabel, type InvoiceDocumentType } from "@/lib/invoice-documents";
-import { formatInvoicePeriod, type InvoiceClientGroup, type InvoiceSelectionData } from "@/lib/invoices";
+import { formatInvoicePeriod, invoiceIssuer, type InvoiceClientGroup, type InvoiceSelectionData } from "@/lib/invoices";
 
 type PdfAdministrator = {
   name: string;
@@ -28,12 +28,20 @@ type PdfPageData = {
   sectionPageCount: number;
 };
 
-type ColumnDefinition = {
-  key: string;
-  label: string;
-  width: string;
-  align?: "left" | "center" | "right";
-  render: (item: InvoiceClientGroup["items"][number]) => string;
+type PdfLineItem = {
+  id: string;
+  carType: string;
+  identifier: string;
+  clientName: string;
+  workDescription: string;
+  amount: string;
+  summary: string;
+};
+
+type DocumentTheme = {
+  primary: string;
+  soft: string;
+  intro: string;
 };
 
 const FONT_REGULAR_PATH = path.join(
@@ -60,152 +68,263 @@ const currencyFormatter = new Intl.NumberFormat("ja-JP", {
   maximumFractionDigits: 0,
 });
 
+const A5_LANDSCAPE_SIZE = {
+  width: 595.28,
+  height: 419.53,
+} as const;
+
+const DETAIL_ROW_COUNT = 5;
+
 let fontRegistered = false;
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 30,
-    paddingRight: 28,
-    paddingBottom: 30,
-    paddingLeft: 28,
-    backgroundColor: "#f8f4ef",
-    color: "#231815",
+    paddingTop: 28,
+    paddingRight: 24,
+    paddingBottom: 18,
+    paddingLeft: 24,
+    backgroundColor: "#ffffff",
+    color: "#2a221d",
     fontFamily: "NotoSansJP",
-    fontSize: 10,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 16,
-  },
-  brandBlock: {
-    width: "44%",
-    gap: 4,
-  },
-  label: {
     fontSize: 9,
-    color: "#8a6d62",
+  },
+  titleWrap: {
+    alignItems: "center",
+    marginBottom: 14,
   },
   title: {
     fontSize: 24,
-    fontFamily: "NotoSansJP",
     fontWeight: 700,
+    letterSpacing: 10,
+    paddingBottom: 4,
+    paddingLeft: 10,
   },
-  brandTitle: {
-    fontSize: 12,
-    fontFamily: "NotoSansJP",
-    fontWeight: 700,
+  titleRule: {
+    width: 148,
+    borderBottomWidth: 1,
+    borderBottomStyle: "solid",
   },
-  mutedText: {
-    color: "#5f4b43",
-    lineHeight: 1.5,
-  },
-  metaPanel: {
-    width: "44%",
-    borderRadius: 12,
-    border: "1 solid #dfd3c8",
-    backgroundColor: "#fffdf9",
-    padding: 12,
-    gap: 6,
-  },
-  metaRow: {
+  topSection: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 10,
+    marginBottom: 10,
   },
-  summaryGrid: {
+  recipientBlock: {
+    width: "48%",
+    paddingTop: 38,
+  },
+  recipientLine: {
+    borderBottomWidth: 1,
+    borderBottomStyle: "solid",
+    paddingBottom: 6,
+    paddingRight: 6,
+    alignItems: "flex-end",
+  },
+  recipientName: {
+    fontSize: 23,
+    fontWeight: 700,
+  },
+  issuerBlock: {
+    width: "34%",
+    paddingTop: 16,
+  },
+  issuerTitle: {
+    fontSize: 20,
+    fontWeight: 700,
+    marginBottom: 6,
+  },
+  issuerText: {
+    fontSize: 9,
+    lineHeight: 1.4,
+    marginBottom: 2,
+  },
+  dateRow: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 16,
+    alignItems: "flex-end",
+    marginBottom: 8,
   },
-  summaryCard: {
+  dateUnit: {
+    width: 78,
+    alignItems: "center",
+    marginRight: 14,
+  },
+  dateUnitLast: {
+    width: 78,
+    alignItems: "center",
+  },
+  dateLabel: {
+    fontSize: 8,
+    marginBottom: 4,
+  },
+  dateValue: {
+    width: "100%",
+    minHeight: 16,
+    borderBottomWidth: 1,
+    borderBottomStyle: "solid",
+    textAlign: "center",
+    fontSize: 11,
+  },
+  codeAndIntroRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  codeBox: {
+    width: 188,
+    minHeight: 30,
+    borderWidth: 1,
+    borderStyle: "solid",
+    flexDirection: "row",
+    alignItems: "stretch",
+    marginRight: 8,
+  },
+  codeLabelCell: {
+    width: 90,
+    justifyContent: "center",
+    paddingLeft: 8,
+    fontSize: 9,
+  },
+  codeSplitCell: {
+    width: 23,
+    borderLeftWidth: 1,
+    borderLeftStyle: "dashed",
+  },
+  introText: {
+    fontSize: 8.5,
     flexGrow: 1,
-    flexBasis: 0,
-    borderRadius: 12,
-    backgroundColor: "#fffdf9",
-    border: "1 solid #eadfd5",
-    padding: 12,
-    gap: 3,
   },
-  summaryValue: {
-    fontSize: 16,
-    fontFamily: "NotoSansJP",
-    fontWeight: 700,
-  },
-  sectionBand: {
-    borderRadius: 12,
-    backgroundColor: "#f1e4d8",
-    paddingTop: 10,
-    paddingRight: 12,
-    paddingBottom: 10,
-    paddingLeft: 12,
-    marginBottom: 12,
-  },
-  sectionBandTitle: {
-    fontSize: 14,
-    fontFamily: "NotoSansJP",
-    fontWeight: 700,
-  },
-  table: {
-    borderRadius: 12,
-    overflow: "hidden",
-    border: "1 solid #decfc2",
-    backgroundColor: "#fffdf9",
+  tableFrame: {
+    borderWidth: 1,
+    borderStyle: "solid",
   },
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#f3e8de",
-    borderBottom: "1 solid #decfc2",
-    paddingTop: 8,
-    paddingBottom: 8,
-    paddingLeft: 10,
-    paddingRight: 10,
+    minHeight: 34,
   },
-  tableRow: {
-    flexDirection: "row",
-    borderBottom: "1 solid #f0e6dd",
-    paddingTop: 8,
-    paddingBottom: 8,
-    paddingLeft: 10,
-    paddingRight: 10,
+  headerCell: {
+    justifyContent: "center",
+    alignItems: "center",
+    borderRightWidth: 1,
+    borderRightStyle: "solid",
+    borderRightColor: "#ffffff",
+    paddingTop: 4,
+    paddingBottom: 4,
+    paddingLeft: 4,
+    paddingRight: 4,
   },
-  cellBase: {
-    fontSize: 9,
-    color: "#231815",
-    paddingRight: 6,
-  },
-  cellHeader: {
-    fontSize: 9,
-    fontFamily: "NotoSansJP",
+  headerCellText: {
+    color: "#ffffff",
+    fontSize: 8.5,
     fontWeight: 700,
-    color: "#5f4b43",
+  },
+  detailRow: {
+    flexDirection: "row",
+    minHeight: 66,
+    borderTopWidth: 1,
+    borderTopStyle: "solid",
+  },
+  detailCell: {
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingLeft: 6,
+    paddingRight: 6,
+    borderRightWidth: 1,
+    borderRightStyle: "solid",
+    justifyContent: "flex-start",
+  },
+  detailCellCenter: {
+    alignItems: "center",
+  },
+  detailCellRight: {
+    alignItems: "flex-end",
+  },
+  detailText: {
+    fontSize: 8.5,
+  },
+  amountGuide: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    right: 0,
+    flexDirection: "row",
+  },
+  amountGuideLine: {
+    width: 28,
+    borderLeftWidth: 1,
+    borderLeftStyle: "dashed",
+  },
+  bottomArea: {
+    flexDirection: "row",
+    borderLeftWidth: 1,
+    borderLeftStyle: "solid",
+    borderRightWidth: 1,
+    borderRightStyle: "solid",
+    borderBottomWidth: 1,
+    borderBottomStyle: "solid",
+  },
+  bottomLeft: {
+    width: "66%",
+  },
+  bottomRight: {
+    width: "34%",
+    borderLeftWidth: 1,
+    borderLeftStyle: "solid",
+  },
+  bottomRow: {
+    flexDirection: "row",
+    minHeight: 33,
+    borderTopWidth: 1,
+    borderTopStyle: "solid",
+  },
+  bottomLabelCell: {
+    width: 74,
+    justifyContent: "center",
+    paddingLeft: 6,
     paddingRight: 6,
   },
-  totalsPanel: {
-    marginTop: 14,
-    alignSelf: "flex-end",
-    width: "46%",
-    borderRadius: 12,
-    border: "1 solid #decfc2",
-    backgroundColor: "#fffdf9",
-    padding: 12,
-    gap: 6,
+  bottomLabelCellWide: {
+    width: 108,
+    justifyContent: "center",
+    paddingLeft: 6,
+    paddingRight: 6,
   },
-  totalsRow: {
+  bottomValueCell: {
+    flexGrow: 1,
+    borderLeftWidth: 1,
+    borderLeftStyle: "solid",
+    paddingTop: 6,
+    paddingBottom: 6,
+    paddingLeft: 6,
+    paddingRight: 6,
+    justifyContent: "center",
+  },
+  bottomValueCellAmount: {
+    flexGrow: 1,
+    borderLeftWidth: 1,
+    borderLeftStyle: "solid",
+    paddingTop: 6,
+    paddingBottom: 6,
+    paddingLeft: 6,
+    paddingRight: 6,
+    justifyContent: "center",
+    alignItems: "flex-end",
+  },
+  bottomAmountGuide: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    right: 0,
     flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 10,
   },
   footer: {
     position: "absolute",
-    left: 28,
-    right: 28,
-    bottom: 18,
+    left: 24,
+    right: 24,
+    bottom: 8,
     flexDirection: "row",
     justifyContent: "space-between",
-    fontSize: 9,
-    color: "#8a6d62",
+    fontSize: 7.5,
+    color: "#7a6f68",
   },
 });
 
@@ -245,56 +364,28 @@ function chunkItems<T>(items: T[], size: number) {
   return chunks.length > 0 ? chunks : [[]];
 }
 
-function getRowsPerPage(documentType: InvoiceDocumentType) {
-  if (documentType === "invoice") {
-    return 12;
-  }
-
-  return 14;
-}
-
-function getColumns(documentType: InvoiceDocumentType): ColumnDefinition[] {
+function getDocumentTheme(documentType: InvoiceDocumentType): DocumentTheme {
   if (documentType === "work-slip") {
-    return [
-      { key: "workDate", label: "作業日", width: "12%", render: (item) => item.workDate },
-      { key: "workCode", label: "作業コード", width: "15%", render: (item) => item.workCode },
-      { key: "carType", label: "車種", width: "14%", render: (item) => item.carType ?? "-" },
-      { key: "workMinutes", label: "作業分", width: "10%", align: "right", render: (item) => String(item.workMinutes) },
-      { key: "laborMinutes", label: "工数分", width: "10%", align: "right", render: (item) => String(item.laborMinutes) },
-      { key: "travelMinutes", label: "移動分", width: "10%", align: "right", render: (item) => String(item.travelMinutes) },
-      { key: "unitCount", label: "台数", width: "9%", align: "right", render: (item) => String(item.unitCount) },
-      { key: "remarks", label: "備考", width: "20%", render: (item) => item.remarks ?? "-" },
-    ];
+    return {
+      primary: "#0ea56f",
+      soft: "#dceee2",
+      intro: "下記の通り受注致しました",
+    };
   }
 
   if (documentType === "delivery-note") {
-    return [
-      { key: "workDate", label: "作業日", width: "14%", render: (item) => item.workDate },
-      {
-        key: "description",
-        label: "品目 / 作業",
-        width: "32%",
-        render: (item) => [item.workCode, item.carType].filter(Boolean).join(" / ") || item.workCode,
-      },
-      { key: "unitCount", label: "数量", width: "10%", align: "right", render: (item) => String(item.unitCount) },
-      { key: "workMinutes", label: "作業分", width: "12%", align: "right", render: (item) => String(item.workMinutes) },
-      { key: "laborMinutes", label: "工数分", width: "12%", align: "right", render: (item) => String(item.laborMinutes) },
-      { key: "remarks", label: "備考", width: "20%", render: (item) => item.remarks ?? "-" },
-    ];
+    return {
+      primary: "#1468b3",
+      soft: "#dbe6f4",
+      intro: "下記の通り納品申し上げます",
+    };
   }
 
-  return [
-    { key: "workDate", label: "作業日", width: "14%", render: (item) => item.workDate },
-    {
-      key: "description",
-      label: "請求明細",
-      width: "38%",
-      render: (item) => [item.workCode, item.carType].filter(Boolean).join(" / ") || item.workCode,
-    },
-    { key: "unitCount", label: "数量", width: "10%", align: "right", render: (item) => String(item.unitCount) },
-    { key: "salesAmount", label: "金額", width: "18%", align: "right", render: (item) => formatCurrency(item.salesAmount) },
-    { key: "remarks", label: "備考", width: "20%", render: (item) => item.remarks ?? "-" },
-  ];
+  return {
+    primary: "#ef3340",
+    soft: "#f8ddd4",
+    intro: "下記の通り御請求申し上げます",
+  };
 }
 
 function buildPages(selection: InvoiceSelectionData, documentTypes: InvoiceDocumentType[]) {
@@ -302,7 +393,7 @@ function buildPages(selection: InvoiceSelectionData, documentTypes: InvoiceDocum
 
   for (const documentType of documentTypes) {
     for (const group of selection.groups) {
-      const chunks = chunkItems(group.items, getRowsPerPage(documentType));
+      const chunks = chunkItems(group.items, DETAIL_ROW_COUNT);
 
       chunks.forEach((rows, index) => {
         pages.push({
@@ -319,46 +410,261 @@ function buildPages(selection: InvoiceSelectionData, documentTypes: InvoiceDocum
   return pages;
 }
 
-function renderGroupTotals(documentType: InvoiceDocumentType, group: InvoiceClientGroup) {
-  if (documentType === "invoice") {
-    return [
-      ["明細件数", `${group.items.length} 件`],
-      ["数量合計", `${group.totalUnitCount}`],
-      ["請求金額合計", formatCurrency(group.totalSalesAmount)],
-    ];
-  }
+function buildIssueDateParts() {
+  const now = new Date();
 
-  if (documentType === "delivery-note") {
-    return [
-      ["明細件数", `${group.items.length} 件`],
-      ["数量合計", `${group.totalUnitCount}`],
-      ["作業分合計", `${group.totalWorkMinutes} 分`],
-      ["工数分合計", `${group.totalLaborMinutes} 分`],
-    ];
-  }
-
-  return [
-    ["明細件数", `${group.items.length} 件`],
-    ["作業分合計", `${group.totalWorkMinutes} 分`],
-    ["工数分合計", `${group.totalLaborMinutes} 分`],
-    ["移動分合計", `${group.totalTravelMinutes} 分`],
-  ];
+  return {
+    year: String(now.getFullYear()),
+    month: String(now.getMonth() + 1),
+    day: String(now.getDate()),
+  };
 }
 
-function buildIssueDate() {
-  return new Date().toISOString().slice(0, 10);
+function buildLineItems(documentType: InvoiceDocumentType, group: InvoiceClientGroup, rows: InvoiceClientGroup["items"]): PdfLineItem[] {
+  return rows.map((item) => {
+    const workParts = [item.workCode];
+
+    if (documentType === "invoice") {
+      workParts.push(`数量 ${item.unitCount}`);
+    } else {
+      workParts.push(`作業 ${item.workMinutes}分`);
+      workParts.push(`工数 ${item.laborMinutes}分`);
+    }
+
+    return {
+      id: item.id,
+      carType: item.carType ?? "",
+      identifier: item.workCode,
+      clientName: group.clientName,
+      workDescription: workParts.join(" / "),
+      amount: formatCurrency(item.salesAmount),
+      summary: item.remarks ?? item.workDate,
+    };
+  });
 }
 
-function alignStyle(align: ColumnDefinition["align"]) {
-  if (align === "right") {
-    return { textAlign: "right" as const };
-  }
+function buildPlaceholderLineItems(count: number): PdfLineItem[] {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `placeholder-${index}`,
+    carType: "",
+    identifier: "",
+    clientName: "",
+    workDescription: "",
+    amount: "",
+    summary: "",
+  }));
+}
 
-  if (align === "center") {
-    return { textAlign: "center" as const };
-  }
+function buildBottomSummaryRows(group: InvoiceClientGroup, administrator: PdfAdministrator) {
+  const subtotalValue = group.totalSalesAmount;
+  const taxValue = Math.floor(subtotalValue * 0.1);
+  const totalValue = subtotalValue + taxValue;
 
-  return { textAlign: "left" as const };
+  return {
+    workLocation: group.clientName,
+    workerName: administrator.name,
+    signLabel: "確認済",
+    subtotal: formatCurrency(subtotalValue),
+    tax: formatCurrency(taxValue),
+    total: formatCurrency(totalValue),
+  };
+}
+
+function DocumentPage({
+  administrator,
+  pageData,
+  selectionPeriod,
+}: {
+  administrator: PdfAdministrator;
+  pageData: PdfPageData;
+  selectionPeriod: string;
+}) {
+  const theme = getDocumentTheme(pageData.documentType);
+  const issueDate = buildIssueDateParts();
+  const detailItems = buildLineItems(pageData.documentType, pageData.group, pageData.rows);
+  const filledItems = [...detailItems, ...buildPlaceholderLineItems(Math.max(0, DETAIL_ROW_COUNT - detailItems.length))];
+  const bottomSummary = buildBottomSummaryRows(pageData.group, administrator);
+
+  return (
+    <Page size={A5_LANDSCAPE_SIZE} style={styles.page}>
+      <View style={styles.titleWrap}>
+        <Text style={{ ...styles.title, color: theme.primary }}>{getInvoiceDocumentLabel(pageData.documentType)}</Text>
+        <View style={{ ...styles.titleRule, borderBottomColor: theme.primary }} />
+      </View>
+
+      <View style={styles.topSection}>
+        <View style={styles.recipientBlock}>
+          <View style={{ ...styles.recipientLine, borderBottomColor: theme.primary }}>
+            <Text style={{ ...styles.recipientName, color: theme.primary }}>{pageData.group.clientName} 様</Text>
+          </View>
+        </View>
+
+        <View style={styles.issuerBlock}>
+          <Text style={{ ...styles.issuerTitle, color: theme.primary }}>{invoiceIssuer.companyName}</Text>
+          <Text style={{ ...styles.issuerText, color: theme.primary }}>{invoiceIssuer.address}</Text>
+          <Text style={{ ...styles.issuerText, color: theme.primary }}>振込先 {invoiceIssuer.transferAccount}</Text>
+        </View>
+      </View>
+
+      <View style={styles.dateRow}>
+        <View style={styles.dateUnit}>
+          <Text style={{ ...styles.dateLabel, color: theme.primary }}>年</Text>
+          <Text style={{ ...styles.dateValue, borderBottomColor: theme.primary, color: theme.primary }}>{issueDate.year}</Text>
+        </View>
+        <View style={styles.dateUnit}>
+          <Text style={{ ...styles.dateLabel, color: theme.primary }}>月</Text>
+          <Text style={{ ...styles.dateValue, borderBottomColor: theme.primary, color: theme.primary }}>{issueDate.month}</Text>
+        </View>
+        <View style={styles.dateUnitLast}>
+          <Text style={{ ...styles.dateLabel, color: theme.primary }}>日</Text>
+          <Text style={{ ...styles.dateValue, borderBottomColor: theme.primary, color: theme.primary }}>{issueDate.day}</Text>
+        </View>
+      </View>
+
+      <View style={styles.codeAndIntroRow}>
+        <View style={{ ...styles.codeBox, borderColor: theme.primary }}>
+          <Text style={{ ...styles.codeLabelCell, color: theme.primary }}>得意先コード</Text>
+          <View style={{ ...styles.codeSplitCell, borderLeftColor: theme.primary }} />
+          <View style={{ ...styles.codeSplitCell, borderLeftColor: theme.primary }} />
+          <View style={{ ...styles.codeSplitCell, borderLeftColor: theme.primary }} />
+          <View style={{ ...styles.codeSplitCell, borderLeftColor: theme.primary }} />
+        </View>
+        <Text style={{ ...styles.introText, color: theme.primary }}>{theme.intro}</Text>
+      </View>
+
+      <View style={{ ...styles.tableFrame, borderColor: theme.primary }}>
+        <View style={styles.tableHeader}>
+          <View style={{ ...styles.headerCell, width: "17%", backgroundColor: theme.primary }}>
+            <Text style={styles.headerCellText}>車　種</Text>
+          </View>
+          <View style={{ ...styles.headerCell, width: "22%", backgroundColor: theme.primary }}>
+            <Text style={styles.headerCellText}>登録番号又は車体番号</Text>
+          </View>
+          <View style={{ ...styles.headerCell, width: "13%", backgroundColor: theme.primary }}>
+            <Text style={styles.headerCellText}>客　名</Text>
+          </View>
+          <View style={{ ...styles.headerCell, width: "18%", backgroundColor: theme.primary }}>
+            <Text style={styles.headerCellText}>作業内容</Text>
+          </View>
+          <View style={{ ...styles.headerCell, width: "17%", backgroundColor: theme.primary }}>
+            <Text style={styles.headerCellText}>金　額</Text>
+          </View>
+          <View style={{ ...styles.headerCell, width: "13%", backgroundColor: theme.primary, borderRightWidth: 0 }}>
+            <Text style={styles.headerCellText}>摘　要</Text>
+          </View>
+        </View>
+
+        {filledItems.map((item, rowIndex) => (
+          <View
+            key={`${item.id}-${rowIndex}`}
+            style={{
+              ...styles.detailRow,
+              borderTopColor: theme.primary,
+              backgroundColor: rowIndex % 2 === 1 ? theme.soft : "#ffffff",
+            }}
+          >
+            <View style={{ ...styles.detailCell, ...styles.detailCellCenter, width: "17%", borderRightColor: theme.primary }}>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>{item.carType}</Text>
+            </View>
+            <View style={{ ...styles.detailCell, width: "22%", borderRightColor: theme.primary }}>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>{item.identifier}</Text>
+            </View>
+            <View style={{ ...styles.detailCell, width: "13%", borderRightColor: theme.primary }}>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>{item.clientName}</Text>
+            </View>
+            <View style={{ ...styles.detailCell, width: "18%", borderRightColor: theme.primary }}>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>{item.workDescription}</Text>
+            </View>
+            <View style={{ ...styles.detailCell, ...styles.detailCellRight, width: "17%", borderRightColor: theme.primary, position: "relative" }}>
+              <View style={styles.amountGuide}>
+                <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
+                <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
+                <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
+              </View>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>{item.amount}</Text>
+            </View>
+            <View style={{ ...styles.detailCell, width: "13%", borderRightWidth: 0 }}>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>{item.summary}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      <View style={{ ...styles.bottomArea, borderLeftColor: theme.primary, borderRightColor: theme.primary, borderBottomColor: theme.primary }}>
+        <View style={styles.bottomLeft}>
+          <View style={{ ...styles.bottomRow, borderTopWidth: 0 }}>
+            <View style={{ ...styles.bottomLabelCell, backgroundColor: theme.soft }}>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>作業場所</Text>
+            </View>
+            <View style={{ ...styles.bottomValueCell, borderLeftColor: theme.primary }}>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.workLocation}</Text>
+            </View>
+            <View style={{ ...styles.bottomLabelCellWide, borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.primary }}>
+              <Text style={{ ...styles.detailText, color: "#ffffff" }}>作業確認(サイン)</Text>
+            </View>
+            <View style={{ ...styles.bottomValueCell, borderLeftColor: theme.primary }}>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.signLabel}</Text>
+            </View>
+          </View>
+
+          <View style={{ ...styles.bottomRow, borderTopColor: theme.primary }}>
+            <View style={{ ...styles.bottomLabelCell, backgroundColor: theme.soft }}>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>記入者(作業者)</Text>
+            </View>
+            <View style={{ ...styles.bottomValueCell, borderLeftColor: theme.primary }}>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.workerName}</Text>
+            </View>
+            <View style={{ ...styles.bottomLabelCellWide, borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.soft }}>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>消費税(10%)</Text>
+            </View>
+            <View style={{ ...styles.bottomValueCellAmount, borderLeftColor: theme.primary, position: "relative" }}>
+              <View style={styles.bottomAmountGuide}>
+                <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
+                <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
+                <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
+              </View>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.tax}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={{ ...styles.bottomRight, borderLeftColor: theme.primary }}>
+          <View style={{ ...styles.bottomRow, borderTopWidth: 0 }}>
+            <View style={{ ...styles.bottomLabelCellWide, backgroundColor: theme.soft }}>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>10%対象小計</Text>
+            </View>
+            <View style={{ ...styles.bottomValueCellAmount, borderLeftColor: theme.primary, position: "relative" }}>
+              <View style={styles.bottomAmountGuide}>
+                <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
+                <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
+                <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
+              </View>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.subtotal}</Text>
+            </View>
+          </View>
+
+          <View style={{ ...styles.bottomRow, borderTopColor: theme.primary }}>
+            <View style={{ ...styles.bottomLabelCellWide, backgroundColor: theme.soft }}>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>合計金額</Text>
+            </View>
+            <View style={{ ...styles.bottomValueCellAmount, borderLeftColor: theme.primary, position: "relative" }}>
+              <View style={styles.bottomAmountGuide}>
+                <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
+                <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
+                <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
+              </View>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.total}</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.footer}>
+        <Text>{pageData.group.clientCode} / {selectionPeriod}</Text>
+        <Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages} | 帳票 ${pageData.sectionPageNumber} / ${pageData.sectionPageCount}`} fixed />
+      </View>
+    </Page>
+  );
 }
 
 function InvoicePdfDocument({
@@ -371,112 +677,18 @@ function InvoicePdfDocument({
   selection: InvoiceSelectionData;
 }) {
   const pages = buildPages(selection, documentTypes);
-  const issueDate = buildIssueDate();
   const selectionPeriod = formatInvoicePeriod(selection.summary);
 
   return (
     <Document title="Polish-DWR Documents" author={administrator.name}>
-      {pages.map((pageData, pageIndex) => {
-        const columns = getColumns(pageData.documentType);
-        const totals = renderGroupTotals(pageData.documentType, pageData.group);
-
-        return (
-          <Page key={`${pageData.documentType}-${pageData.group.clientCode}-${pageIndex}`} size="A4" style={styles.page}>
-            <View style={styles.header}>
-              <View style={styles.brandBlock}>
-                <Text style={styles.label}>Polish-DWR Document Pack</Text>
-                <Text style={styles.title}>{getInvoiceDocumentLabel(pageData.documentType)}</Text>
-                <Text style={styles.brandTitle}>{pageData.group.clientName}</Text>
-                <Text style={styles.mutedText}>得意先コード: {pageData.group.clientCode}</Text>
-              </View>
-
-              <View style={styles.metaPanel}>
-                <View style={styles.metaRow}>
-                  <Text style={styles.label}>発行日</Text>
-                  <Text>{issueDate}</Text>
-                </View>
-                <View style={styles.metaRow}>
-                  <Text style={styles.label}>対象期間</Text>
-                  <Text>{selectionPeriod}</Text>
-                </View>
-                <View style={styles.metaRow}>
-                  <Text style={styles.label}>発行者</Text>
-                  <Text>{administrator.name}</Text>
-                </View>
-                <View style={styles.metaRow}>
-                  <Text style={styles.label}>連絡先</Text>
-                  <Text>{administrator.email}</Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.summaryGrid}>
-              <View style={styles.summaryCard}>
-                <Text style={styles.label}>選択日報</Text>
-                <Text style={styles.summaryValue}>{selection.summary.reportCount} 件</Text>
-              </View>
-              <View style={styles.summaryCard}>
-                <Text style={styles.label}>対象得意先</Text>
-                <Text style={styles.summaryValue}>{selection.summary.clientCount} 社</Text>
-              </View>
-              <View style={styles.summaryCard}>
-                <Text style={styles.label}>売上合計</Text>
-                <Text style={styles.summaryValue}>{formatCurrency(selection.summary.totalSalesAmount)}</Text>
-              </View>
-            </View>
-
-            <View style={styles.sectionBand}>
-              <Text style={styles.sectionBandTitle}>
-                {getInvoiceDocumentLabel(pageData.documentType)} / {pageData.sectionPageNumber} / {pageData.sectionPageCount}
-              </Text>
-              <Text style={styles.mutedText}>選択された日報を得意先単位にまとめて出力しています。</Text>
-            </View>
-
-            <View style={styles.table}>
-              <View style={styles.tableHeader}>
-                {columns.map((column) => (
-                  <Text
-                    key={column.key}
-                    style={{ ...styles.cellHeader, width: column.width, ...alignStyle(column.align) }}
-                  >
-                    {column.label}
-                  </Text>
-                ))}
-              </View>
-
-              {pageData.rows.map((item, rowIndex) => (
-                <View key={`${item.id}-${rowIndex}`} style={styles.tableRow}>
-                  {columns.map((column) => (
-                    <Text
-                      key={column.key}
-                      style={{ ...styles.cellBase, width: column.width, ...alignStyle(column.align) }}
-                    >
-                      {column.render(item)}
-                    </Text>
-                  ))}
-                </View>
-              ))}
-            </View>
-
-            <View style={styles.totalsPanel}>
-              {totals.map(([label, value]) => (
-                <View key={label} style={styles.totalsRow}>
-                  <Text style={styles.label}>{label}</Text>
-                  <Text>{value}</Text>
-                </View>
-              ))}
-            </View>
-
-            <View style={styles.footer}>
-              <Text>{pageData.group.clientName}</Text>
-              <Text
-                render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`}
-                fixed
-              />
-            </View>
-          </Page>
-        );
-      })}
+      {pages.map((pageData, pageIndex) => (
+        <DocumentPage
+          key={`${pageData.documentType}-${pageData.group.clientCode}-${pageIndex}`}
+          administrator={administrator}
+          pageData={pageData}
+          selectionPeriod={selectionPeriod}
+        />
+      ))}
     </Document>
   );
 }

@@ -5,7 +5,7 @@ import {
   parseInvoiceSelectionIds,
 } from "@/lib/invoice-documents";
 import { renderInvoicePdfBuffer } from "@/lib/invoice-pdf";
-import { getInvoiceSelectionData } from "@/lib/invoices";
+import { getInvoiceSelectionData, hasSingleInvoiceClient } from "@/lib/invoices";
 
 export const runtime = "nodejs";
 
@@ -28,6 +28,13 @@ export async function GET(request: Request) {
 
   if (selection.items.length === 0) {
     return apiError({ code: "NOT_FOUND", message: "選択された日報が見つかりませんでした。" }, { status: 404 });
+  }
+
+  if (!hasSingleInvoiceClient(selection)) {
+    return apiError(
+      { code: "VALIDATION_ERROR", message: "伝票出力は同一得意先の日報のみ選択できます。" },
+      { status: 400 },
+    );
   }
 
   const pdfBuffer = await renderInvoicePdfBuffer({

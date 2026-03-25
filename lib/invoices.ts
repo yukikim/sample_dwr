@@ -2,6 +2,13 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 
+export const invoiceIssuer = {
+  companyName: "POLiSH.合同会社",
+  address: "〒270-1337 千葉県印西市草深2429-18",
+  transferAccount: "xxxxxx",
+  sealLabel: "印",
+} as const;
+
 export type InvoiceReportItem = {
   id: string;
   workDate: string;
@@ -46,6 +53,10 @@ export type InvoiceSelectionData = {
   summary: InvoiceSelectionSummary;
   missingIds: string[];
 };
+
+export function hasSingleInvoiceClient(selection: InvoiceSelectionData) {
+  return selection.groups.length <= 1;
+}
 
 function serializeInvoiceReport(report: {
   id: string;

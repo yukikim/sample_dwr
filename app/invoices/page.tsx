@@ -3,10 +3,34 @@ import { redirect } from "next/navigation";
 
 import { buildInvoicePdfUrl, invoiceDocumentTypes, getInvoiceDocumentLabel, type InvoiceDocumentType } from "@/lib/invoice-documents";
 import { getCurrentAdministrator } from "@/lib/auth";
-import { formatInvoicePeriod, getInvoiceSelectionData } from "@/lib/invoices";
+import { formatInvoicePeriod, getInvoiceSelectionData, hasSingleInvoiceClient, invoiceIssuer } from "@/lib/invoices";
 import { parseInvoiceSelectionIdsFromPage } from "@/lib/invoice-documents";
 
 type InvoicePageSearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+function previewTheme(documentType: InvoiceDocumentType) {
+  if (documentType === "work-slip") {
+    return {
+      primary: "#0ea56f",
+      soft: "#dceee2",
+      intro: "下記の通り受注致しました",
+    };
+  }
+
+  if (documentType === "delivery-note") {
+    return {
+      primary: "#1468b3",
+      soft: "#dbe6f4",
+      intro: "下記の通り納品申し上げます",
+    };
+  }
+
+  return {
+    primary: "#ef3340",
+    soft: "#f8ddd4",
+    intro: "下記の通り御請求申し上げます",
+  };
+}
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("ja-JP", {
@@ -18,14 +42,14 @@ function formatCurrency(value: number) {
 
 function previewDocumentDescription(documentType: InvoiceDocumentType) {
   if (documentType === "work-slip") {
-    return "作業日、作業コード、分数、移動、備考を含む現場向けの作業伝票です。";
+    return "受注向けの作業伝票レイアウトで、車種・作業内容・金額を罫線帳票として出力します。";
   }
 
   if (documentType === "delivery-note") {
-    return "数量と作業内訳を中心にまとめた納品書です。複数日報は得意先単位で束ねて出力します。";
+    return "納品書向けの配色と文言に切り替え、同じ骨格のまま納品帳票として出力します。";
   }
 
-  return "売上金額を中心にまとめた請求書です。選択された日報を得意先ごとに集約して出力します。";
+  return "請求書向けの配色と金額欄を中心に、請求帳票として見える構成で出力します。";
 }
 
 export default async function InvoicesPage({ searchParams }: { searchParams: InvoicePageSearchParams }) {
@@ -38,6 +62,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
   const selectedIds = parseInvoiceSelectionIdsFromPage(await searchParams);
   const selection = await getInvoiceSelectionData(selectedIds);
   const hasSelection = selection.items.length > 0;
+  const hasSingleClient = hasSingleInvoiceClient(selection);
+  const downloadDisabled = !hasSelection || !hasSingleClient;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#f7efe2,#f3e3ce_35%,#efe6db_70%,#f8f4ef_100%)] px-6 py-8 text-(--ink) sm:px-10">
@@ -60,8 +86,13 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
             </Link>
             {hasSelection ? (
               <a
-                href={buildInvoicePdfUrl(selection.items.map((item) => item.id), "all")}
-                className="inline-flex h-11 items-center justify-center rounded-full bg-(--accent-strong) px-5 text-sm font-semibold text-white transition hover:bg-(--accent-deep)"
+                href={downloadDisabled ? undefined : buildInvoicePdfUrl(selection.items.map((item) => item.id), "all")}
+                aria-disabled={downloadDisabled}
+                className={`inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold transition ${
+                  downloadDisabled
+                    ? "pointer-events-none border border-black/10 bg-white text-(--ink-muted) opacity-50"
+                    : "bg-(--accent-strong) text-white hover:bg-(--accent-deep)"
+                }`}
               >
                 3点まとめてダウンロード
               </a>
@@ -81,6 +112,12 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
             {selection.missingIds.length > 0 ? (
               <section className="rounded-3xl border border-[#e7b4ab] bg-[#fff3f0] px-5 py-4 text-sm text-[#8e2c18] shadow-[0_10px_30px_rgba(142,44,24,0.08)]">
                 選択された日報のうち {selection.missingIds.length} 件は見つからなかったため、存在するデータのみを対象にしています。
+              </section>
+            ) : null}
+
+            {!hasSingleClient ? (
+              <section className="rounded-3xl border border-[#e7b4ab] bg-[#fff3f0] px-5 py-4 text-sm text-[#8e2c18] shadow-[0_10px_30px_rgba(142,44,24,0.08)]">
+                複数得意先の日報が含まれています。伝票は同一得意先のみ出力できます。
               </section>
             ) : null}
 
@@ -107,7 +144,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 className="text-xl font-semibold">選択内容</h2>
-                  <p className="mt-1 text-sm text-(--ink-soft)">得意先ごとに帳票をまとめて出力します。</p>
+                  <p className="mt-1 text-sm text-(--ink-soft)">同一得意先の日報を1セットの帳票として出力します。</p>
                 </div>
               </div>
 
@@ -144,7 +181,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
 
             <section className="grid gap-6 xl:grid-cols-3">
               {invoiceDocumentTypes.map((documentType) => (
-                <article key={documentType} className="rounded-[2rem] border border-white/60 bg-white/88 p-6 shadow-[0_20px_60px_rgba(76,47,33,0.10)]">
+                <article key={documentType} className="rounded-4xl border border-white/60 bg-white/88 p-6 shadow-[0_20px_60px_rgba(76,47,33,0.10)]">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--ink-muted)">PDF Preview</p>
@@ -152,44 +189,119 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
                       <p className="mt-2 text-sm text-(--ink-soft)">{previewDocumentDescription(documentType)}</p>
                     </div>
                     <a
-                      href={buildInvoicePdfUrl(selection.items.map((item) => item.id), [documentType])}
-                      className="inline-flex h-11 shrink-0 items-center justify-center rounded-full border border-black/10 bg-white px-5 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3"
+                      href={downloadDisabled ? undefined : buildInvoicePdfUrl(selection.items.map((item) => item.id), [documentType])}
+                      aria-disabled={downloadDisabled}
+                      className={`inline-flex h-11 shrink-0 items-center justify-center rounded-full border px-5 text-sm font-medium transition ${
+                        downloadDisabled
+                          ? "pointer-events-none border-black/10 bg-white text-(--ink-muted) opacity-50"
+                          : "border-black/10 bg-white text-(--ink) hover:border-black/20 hover:bg-black/3"
+                      }`}
                     >
                       ダウンロード
                     </a>
                   </div>
 
-                  <div className="mt-6 rounded-[1.5rem] border border-[#eadfd5] bg-[linear-gradient(180deg,#fffdfb_0%,#fbf4ec_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
-                    <div className="flex items-start justify-between border-b border-dashed border-[#d9c8bb] pb-4">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.18em] text-(--ink-muted)">Polish-DWR</p>
-                        <h3 className="mt-2 text-xl font-semibold">{getInvoiceDocumentLabel(documentType)}</h3>
+                  <div className="mt-6 rounded-3xl border border-[#eadfd5] bg-white p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+                    <div className="mx-auto w-fit border-b pb-1 text-center" style={{ color: previewTheme(documentType).primary, borderColor: previewTheme(documentType).primary }}>
+                      <h3 className="pl-[0.45em] text-2xl font-semibold tracking-[0.45em]">{getInvoiceDocumentLabel(documentType)}</h3>
+                    </div>
+
+                    <div className="mt-5 flex items-start justify-between gap-6">
+                      <div className="min-w-0 flex-1 pt-7">
+                        <div className="border-b pb-2 text-right" style={{ color: previewTheme(documentType).primary, borderColor: previewTheme(documentType).primary }}>
+                          <p className="text-2xl font-semibold">{selection.groups[0]?.clientName ?? "得意先"} 様</p>
+                        </div>
                       </div>
-                      <div className="text-right text-xs text-(--ink-soft)">
-                        <p>対象期間</p>
-                        <p className="mt-1 font-medium text-(--ink)">{formatInvoicePeriod(selection.summary)}</p>
+                      <div className="w-[34%] text-left" style={{ color: previewTheme(documentType).primary }}>
+                        <p className="text-2xl font-semibold">{invoiceIssuer.companyName}</p>
+                        <p className="mt-1 text-xs">{invoiceIssuer.address}</p>
+                        <p className="mt-1 text-xs">振込先 {invoiceIssuer.transferAccount}</p>
                       </div>
                     </div>
 
-                    <div className="mt-4 space-y-3 text-sm text-(--ink-soft)">
-                      {selection.groups.slice(0, 3).map((group) => (
-                        <div key={`${documentType}-${group.clientCode}`} className="rounded-2xl border border-[#efe3d8] bg-white/70 px-4 py-3">
-                          <div className="flex items-center justify-between gap-4">
-                            <div>
-                              <p className="font-medium text-(--ink)">{group.clientName}</p>
-                              <p className="text-xs">{group.clientCode}</p>
-                            </div>
-                            <div className="text-right text-xs">
-                              <p>{group.items.length} 件</p>
-                              <p className="mt-1 font-medium text-(--ink)">{formatCurrency(group.totalSalesAmount)}</p>
-                            </div>
-                          </div>
+                    <div className="mt-4 flex items-end gap-3" style={{ color: previewTheme(documentType).primary }}>
+                      {[
+                        { label: "年", value: new Date().getFullYear() },
+                        { label: "月", value: new Date().getMonth() + 1 },
+                        { label: "日", value: new Date().getDate() },
+                      ].map((part, index) => (
+                        <div key={`${documentType}-${part.label}-${index}`} className="w-16 text-center text-xs">
+                          <p>{part.label}</p>
+                          <div className="mt-1 border-b text-sm font-medium" style={{ borderColor: previewTheme(documentType).primary }}>{part.value}</div>
                         </div>
                       ))}
+                    </div>
 
-                      {selection.groups.length > 3 ? (
-                        <p className="text-xs text-(--ink-muted)">ほか {selection.groups.length - 3} 社分を含みます。</p>
-                      ) : null}
+                    <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: previewTheme(documentType).primary }}>
+                      <div className="flex h-10 w-47 items-stretch border" style={{ borderColor: previewTheme(documentType).primary }}>
+                        <div className="flex w-22.5 items-center px-2">得意先コード</div>
+                        {Array.from({ length: 4 }).map((_, index) => (
+                          <div key={`${documentType}-code-${index}`} className="w-5.75 border-l border-dashed" style={{ borderColor: previewTheme(documentType).primary }} />
+                        ))}
+                      </div>
+                      <p>{previewTheme(documentType).intro}</p>
+                    </div>
+
+                    <div className="mt-3 overflow-hidden border" style={{ borderColor: previewTheme(documentType).primary }}>
+                      <div className="grid min-h-8 grid-cols-[17%_22%_13%_18%_17%_13%] text-center text-xs font-semibold text-white" style={{ backgroundColor: previewTheme(documentType).primary }}>
+                        <div className="flex items-center justify-center border-r border-white/80">車種</div>
+                        <div className="flex items-center justify-center border-r border-white/80">登録番号又は車体番号</div>
+                        <div className="flex items-center justify-center border-r border-white/80">客名</div>
+                        <div className="flex items-center justify-center border-r border-white/80">作業内容</div>
+                        <div className="flex items-center justify-center border-r border-white/80">金額</div>
+                        <div className="flex items-center justify-center">摘要</div>
+                      </div>
+
+                      {Array.from({ length: 5 }).map((_, rowIndex) => {
+                        const item = selection.groups[0]?.items[rowIndex];
+
+                        return (
+                          <div
+                            key={`${documentType}-row-${rowIndex}`}
+                            className="grid min-h-16 grid-cols-[17%_22%_13%_18%_17%_13%] text-xs"
+                            style={{
+                              color: previewTheme(documentType).primary,
+                              backgroundColor: rowIndex % 2 === 1 ? previewTheme(documentType).soft : "#ffffff",
+                              borderTop: `1px solid ${previewTheme(documentType).primary}`,
+                            }}
+                          >
+                            <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{item?.carType ?? ""}</div>
+                            <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{item?.workCode ?? ""}</div>
+                            <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{selection.groups[0]?.clientName ?? ""}</div>
+                            <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{item ? `${item.workCode} / 作業 ${item.workMinutes}分` : ""}</div>
+                            <div className="border-r px-2 py-2 text-right" style={{ borderColor: previewTheme(documentType).primary }}>{item ? formatCurrency(item.salesAmount) : ""}</div>
+                            <div className="px-2 py-2">{item?.remarks ?? item?.workDate ?? ""}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="grid min-h-16 grid-cols-[66%_34%] border-x border-b text-xs" style={{ borderColor: previewTheme(documentType).primary, color: previewTheme(documentType).primary }}>
+                      <div>
+                        <div className="grid grid-cols-[74px_1fr_108px_1fr] border-b" style={{ borderColor: previewTheme(documentType).primary }}>
+                          <div className="px-2 py-2" style={{ backgroundColor: previewTheme(documentType).soft }}>作業場所</div>
+                          <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{selection.groups[0]?.clientName ?? ""}</div>
+                          <div className="border-l px-2 py-2 text-white" style={{ borderColor: previewTheme(documentType).primary, backgroundColor: previewTheme(documentType).primary }}>作業確認(サイン)</div>
+                          <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>確認済</div>
+                        </div>
+                        <div className="grid grid-cols-[74px_1fr_108px_1fr]" style={{ borderColor: previewTheme(documentType).primary }}>
+                          <div className="px-2 py-2" style={{ backgroundColor: previewTheme(documentType).soft }}>記入者(作業者)</div>
+                          <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{administrator.name}</div>
+                          <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary, backgroundColor: previewTheme(documentType).soft }}>消費税(10%)</div>
+                          <div className="border-l px-2 py-2 text-right" style={{ borderColor: previewTheme(documentType).primary }}>{formatCurrency(Math.floor((selection.groups[0]?.totalSalesAmount ?? 0) * 0.1))}</div>
+                        </div>
+                      </div>
+
+                      <div className="border-l" style={{ borderColor: previewTheme(documentType).primary }}>
+                        <div className="grid grid-cols-[108px_1fr] border-b" style={{ borderColor: previewTheme(documentType).primary }}>
+                          <div className="px-2 py-2" style={{ backgroundColor: previewTheme(documentType).soft }}>10%対象小計</div>
+                          <div className="border-l px-2 py-2 text-right" style={{ borderColor: previewTheme(documentType).primary }}>{formatCurrency(selection.groups[0]?.totalSalesAmount ?? 0)}</div>
+                        </div>
+                        <div className="grid grid-cols-[108px_1fr]" style={{ borderColor: previewTheme(documentType).primary }}>
+                          <div className="px-2 py-2" style={{ backgroundColor: previewTheme(documentType).soft }}>合計金額</div>
+                          <div className="border-l px-2 py-2 text-right" style={{ borderColor: previewTheme(documentType).primary }}>{formatCurrency((selection.groups[0]?.totalSalesAmount ?? 0) + Math.floor((selection.groups[0]?.totalSalesAmount ?? 0) * 0.1))}</div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </article>

@@ -262,6 +262,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
   const [isFetching, startFetching] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
+  const [selectedClientKey, setSelectedClientKey] = useState<string | null>(null);
 
   const status = searchParams.get("status");
 
@@ -372,6 +373,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
   const selectedCount = selectedReportIds.length;
   const selectedReportIdSet = new Set(selectedReportIds);
   const allVisibleSelected = items.length > 0 && items.every((item) => selectedReportIdSet.has(item.id));
+  const selectedClientItem = items.find((item) => `${item.clientCode}::${item.clientName}` === selectedClientKey);
 
   async function handleDelete(reportId: string) {
     const shouldDelete = window.confirm("この日報を削除します。元に戻せません。");
@@ -401,37 +403,92 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
       }
 
       setSuccessMessage("日報を削除しました。");
-      setSelectedReportIds((current) => current.filter((id) => id !== reportId));
+      setSelectedReportIds((current) => {
+        const nextIds = current.filter((id) => id !== reportId);
+
+        if (nextIds.length === 0) {
+          setSelectedClientKey(null);
+        }
+
+        return nextIds;
+      });
       setActiveFilters((current) => ({ ...current }));
     } finally {
       setDeletingId(null);
     }
   }
 
-  function handleToggleReportSelection(reportId: string) {
+  function handleToggleReportSelection(reportId: string, clientKey: string) {
     setSelectedReportIds((current) => {
       if (current.includes(reportId)) {
-        return current.filter((id) => id !== reportId);
+        const nextIds = current.filter((id) => id !== reportId);
+
+        if (nextIds.length === 0) {
+          setSelectedClientKey(null);
+        }
+
+        return nextIds;
       }
 
+      if (selectedClientKey && selectedClientKey !== clientKey) {
+        setErrorMessage("伝票作成では同一得意先の日報のみ選択できます。別の得意先を選ぶ前に現在の選択を解除してください。");
+        return current;
+      }
+
+      setErrorMessage(null);
+      setSelectedClientKey(clientKey);
       return [...current, reportId];
     });
   }
 
   function handleToggleVisibleSelections() {
     const visibleIds = items.map((item) => item.id);
+    const visibleClientKeys = Array.from(new Set(items.map((item) => `${item.clientCode}::${item.clientName}`)));
 
     setSelectedReportIds((current) => {
       if (visibleIds.every((id) => current.includes(id))) {
-        return current.filter((id) => !visibleIds.includes(id));
+        const nextIds = current.filter((id) => !visibleIds.includes(id));
+
+        if (nextIds.length === 0) {
+          setSelectedClientKey(null);
+        }
+
+        return nextIds;
       }
 
-      return Array.from(new Set([...current, ...visibleIds]));
+      if (!selectedClientKey && visibleClientKeys.length > 1) {
+        setErrorMessage("表示中に複数の得意先が含まれるため、一括選択できません。伝票作成は同一得意先のみ選択可能です。");
+        return current;
+      }
+
+      const allowedClientKey = selectedClientKey ?? visibleClientKeys[0] ?? null;
+      const matchedVisibleIds = items
+        .filter((item) => `${item.clientCode}::${item.clientName}` === allowedClientKey)
+        .map((item) => item.id);
+
+      if (matchedVisibleIds.length === 0) {
+        setErrorMessage("現在の選択と同じ得意先の日報が表示されていません。");
+        return current;
+      }
+
+      if (matchedVisibleIds.length !== items.length) {
+        setErrorMessage("伝票作成では同一得意先の日報のみ選択できます。同じ得意先の行だけを追加しました。");
+      } else {
+        setErrorMessage(null);
+      }
+
+      if (!selectedClientKey && allowedClientKey) {
+        setSelectedClientKey(allowedClientKey);
+      }
+
+      return Array.from(new Set([...current, ...matchedVisibleIds]));
     });
   }
 
   function clearSelections() {
     setSelectedReportIds([]);
+    setSelectedClientKey(null);
+    setErrorMessage(null);
   }
 
   function handleFilterChange(name: keyof Filters, value: string) {
@@ -738,8 +795,13 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
             <div>
               <p className="text-sm font-medium text-(--ink)">選択中の日報 {selectedCount} 件</p>
               <p className="mt-1 text-sm text-(--ink-soft)">
-                複数ページにまたがって選択できます。選択した日報を伝票ページへ引き継ぎます。
+                複数ページにまたがって選択できます。伝票作成は同一得意先のみ選択可能です。
               </p>
+              {selectedClientKey && selectedClientItem ? (
+                <p className="mt-1 text-xs text-(--ink-muted)">
+                  選択中の得意先: {selectedClientItem.clientName} / {selectedClientItem.clientCode}
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-wrap gap-3">
               <button
@@ -810,7 +872,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                         <input
                           type="checkbox"
                           checked={selectedReportIdSet.has(item.id)}
-                          onChange={() => handleToggleReportSelection(item.id)}
+                          onChange={() => handleToggleReportSelection(item.id, `${item.clientCode}::${item.clientName}`)}
                           aria-label={`${item.clientName} を選択`}
                           className="h-4 w-4 rounded border border-black/20 accent-(--accent-strong)"
                         />
