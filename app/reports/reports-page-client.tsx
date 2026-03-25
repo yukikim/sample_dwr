@@ -13,6 +13,12 @@ type ReportMasterOption = {
   name: string;
 };
 
+type ClientOption = {
+  id: string;
+  code: string;
+  name: string;
+};
+
 type VisibleColumns = {
   carType: boolean;
   workLocation: boolean;
@@ -119,6 +125,16 @@ type ReportMonthsResponse = {
 type ReportMasterListResponse = {
   data: {
     items: ReportMasterOption[];
+  };
+  error: {
+    code: string;
+    message: string;
+  } | null;
+};
+
+type ClientListResponse = {
+  data: {
+    items: ClientOption[];
   };
   error: {
     code: string;
@@ -364,9 +380,13 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
   const [items, setItems] = useState<ReportItem[]>([]);
   const [summary, setSummary] = useState<Summary>(emptySummary);
   const [monthOptions, setMonthOptions] = useState<MonthOption[]>([]);
+  const [clientOptions, setClientOptions] = useState<ClientOption[]>([]);
+  const [carTypeOptions, setCarTypeOptions] = useState<ReportMasterOption[]>([]);
   const [workLocationOptions, setWorkLocationOptions] = useState<ReportMasterOption[]>([]);
+  const [workContentOptions, setWorkContentOptions] = useState<ReportMasterOption[]>([]);
   const [vehicleIdentifierOptions, setVehicleIdentifierOptions] = useState<string[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumns>(defaultVisibleColumns);
+  const [filterOptionsError, setFilterOptionsError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -408,24 +428,35 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
     let cancelled = false;
 
     async function loadFilterOptions() {
-      const [monthsResponse, workLocationsResponse, vehicleIdentifiersResponse] = await Promise.all([
+      setFilterOptionsError(null);
+
+      const [monthsResponse, clientsResponse, carTypesResponse, workLocationsResponse, workContentsResponse, vehicleIdentifiersResponse] = await Promise.all([
         fetch("/api/reports/months", { cache: "no-store" }),
+        fetch("/api/clients", { cache: "no-store" }),
+        fetch("/api/car-types", { cache: "no-store" }),
         fetch("/api/work-locations", { cache: "no-store" }),
+        fetch("/api/work-contents", { cache: "no-store" }),
         fetch("/api/reports/vehicle-identifiers", { cache: "no-store" }),
       ]);
 
       if (
         monthsResponse.status === 401 ||
+        clientsResponse.status === 401 ||
+        carTypesResponse.status === 401 ||
         workLocationsResponse.status === 401 ||
+        workContentsResponse.status === 401 ||
         vehicleIdentifiersResponse.status === 401
       ) {
         router.push("/");
         return;
       }
 
-      const [monthsJson, workLocationsJson, vehicleIdentifiersJson] = await Promise.all([
+      const [monthsJson, clientsJson, carTypesJson, workLocationsJson, workContentsJson, vehicleIdentifiersJson] = await Promise.all([
         monthsResponse.json() as Promise<ReportMonthsResponse>,
+        clientsResponse.json() as Promise<ClientListResponse>,
+        carTypesResponse.json() as Promise<ReportMasterListResponse>,
         workLocationsResponse.json() as Promise<ReportMasterListResponse>,
+        workContentsResponse.json() as Promise<ReportMasterListResponse>,
         vehicleIdentifiersResponse.json() as Promise<VehicleIdentifierOptionsResponse>,
       ]);
 
@@ -437,12 +468,37 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
         setMonthOptions(monthsJson.data.items);
       }
 
+      if (clientsResponse.ok) {
+        setClientOptions(clientsJson.data.items);
+      }
+
+      if (carTypesResponse.ok) {
+        setCarTypeOptions(carTypesJson.data.items);
+      }
+
       if (workLocationsResponse.ok) {
         setWorkLocationOptions(workLocationsJson.data.items);
       }
 
+      if (workContentsResponse.ok) {
+        setWorkContentOptions(workContentsJson.data.items);
+      }
+
       if (vehicleIdentifiersResponse.ok) {
         setVehicleIdentifierOptions(vehicleIdentifiersJson.data.items);
+      }
+
+      const fetchErrors = [
+        !monthsResponse.ok ? monthsJson.error?.message ?? "対象月候補の取得に失敗しました。" : null,
+        !clientsResponse.ok ? clientsJson.error?.message ?? "得意先候補の取得に失敗しました。" : null,
+        !carTypesResponse.ok ? carTypesJson.error?.message ?? "車種候補の取得に失敗しました。" : null,
+        !workLocationsResponse.ok ? workLocationsJson.error?.message ?? "作業場所候補の取得に失敗しました。" : null,
+        !workContentsResponse.ok ? workContentsJson.error?.message ?? "作業内容候補の取得に失敗しました。" : null,
+        !vehicleIdentifiersResponse.ok ? vehicleIdentifiersJson.error?.message ?? "登録番号または車体番号候補の取得に失敗しました。" : null,
+      ].filter((value): value is string => value !== null);
+
+      if (fetchErrors.length > 0) {
+        setFilterOptionsError(`検索候補の取得に一部失敗しました。${fetchErrors[0]}`);
       }
     }
 
@@ -748,7 +804,34 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
     }));
   }
 
+  function handleClientNameChange(clientCode: string) {
+    if (clientCode === "") {
+      setDraftFilters((current) => ({
+        ...current,
+        clientCode: "",
+        clientName: "",
+      }));
+      return;
+    }
+
+    const selectedClient = clientOptions.find((option) => option.code === clientCode);
+
+    setDraftFilters((current) => ({
+      ...current,
+      clientCode,
+      clientName: selectedClient?.name ?? current.clientName,
+    }));
+  }
+
   const visibleColumnCount = countVisibleColumns(visibleColumns);
+  const selectedClientOption = clientOptions.find((option) => option.code === draftFilters.clientCode)
+    ?? clientOptions.find((option) => option.name === draftFilters.clientName)
+    ?? null;
+  const shouldShowClientFallbackOption =
+    draftFilters.clientName !== "" &&
+    !clientOptions.some((option) => option.name === draftFilters.clientName || option.code === draftFilters.clientCode);
+  const shouldShowCarTypeFallbackOption = draftFilters.carType !== "" && !carTypeOptions.some((option) => option.name === draftFilters.carType);
+  const shouldShowWorkContentFallbackOption = draftFilters.workCode !== "" && !workContentOptions.some((option) => option.name === draftFilters.workCode);
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#f7efe2,#f3e3ce_35%,#efe6db_70%,#f8f4ef_100%)] px-6 py-8 text-(--ink) sm:px-10">
@@ -870,33 +953,47 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
               得意先コード
               <input
                 type="text"
-                value={draftFilters.clientCode}
-                onChange={(event) => handleFilterChange("clientCode", event.target.value)}
-                className="h-11 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
-                placeholder="C001"
+                value={selectedClientOption?.code ?? draftFilters.clientCode}
+                readOnly
+                className="h-11 rounded-2xl border border-black/10 bg-[#f8f5f0] px-4 text-(--ink-muted) outline-none"
+                placeholder="得意先名を選択"
               />
             </label>
 
             <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
               得意先名
-              <input
-                type="text"
-                value={draftFilters.clientName}
-                onChange={(event) => handleFilterChange("clientName", event.target.value)}
+              <select
+                value={selectedClientOption?.code ?? ""}
+                onChange={(event) => handleClientNameChange(event.target.value)}
                 className="h-11 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
-                placeholder="株式会社サンプル"
-              />
+              >
+                <option value="">すべて</option>
+                {shouldShowClientFallbackOption ? (
+                  <option value={draftFilters.clientCode || draftFilters.clientName}>{draftFilters.clientName}</option>
+                ) : null}
+                {clientOptions.map((option) => (
+                  <option key={option.id} value={option.code}>
+                    {option.name} / {option.code}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
               車種
-              <input
-                type="text"
+              <select
                 value={draftFilters.carType}
                 onChange={(event) => handleFilterChange("carType", event.target.value)}
                 className="h-11 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
-                placeholder="普通車"
-              />
+              >
+                <option value="">すべて</option>
+                {shouldShowCarTypeFallbackOption ? <option value={draftFilters.carType}>{draftFilters.carType}</option> : null}
+                {carTypeOptions.map((option) => (
+                  <option key={option.id} value={option.name}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
@@ -933,13 +1030,19 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
 
             <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
               作業内容
-              <input
-                type="text"
+              <select
                 value={draftFilters.workCode}
                 onChange={(event) => handleFilterChange("workCode", event.target.value)}
                 className="h-11 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
-                placeholder="洗車・内装清掃"
-              />
+              >
+                <option value="">すべて</option>
+                {shouldShowWorkContentFallbackOption ? <option value={draftFilters.workCode}>{draftFilters.workCode}</option> : null}
+                {workContentOptions.map((option) => (
+                  <option key={option.id} value={option.name}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
@@ -985,6 +1088,12 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
               </button>
             </div>
           </form>
+
+          {filterOptionsError ? (
+            <div className="mt-4 rounded-2xl border border-[#e7b4ab] bg-[#fff3f0] px-4 py-3 text-sm text-[#8e2c18]">
+              {filterOptionsError}
+            </div>
+          ) : null}
         </section>
 
         <section className="rounded-4xl border border-white/60 bg-white/88 p-6 shadow-[0_20px_60px_rgba(76,47,33,0.10)]">
