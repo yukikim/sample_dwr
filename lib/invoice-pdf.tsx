@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: "solid",
     flexDirection: "row",
-    alignItems: "stretch",
+    alignItems: "center",
     marginRight: 8,
   },
   codeLabelCell: {
@@ -540,6 +540,7 @@ function DocumentPage({
       <View style={styles.codeAndIntroRow}>
         <View style={{ ...styles.codeBox, borderColor: theme.primary }}>
           <Text style={{ ...styles.codeLabelCell, color: theme.primary }}>得意先コード</Text>
+          <Text style={{ ...styles.codeLabelCell, color: theme.primary }}>{pageData.group.clientCode}</Text>
           {/* <View style={{ ...styles.codeSplitCell, borderLeftColor: theme.primary }} />
           <View style={{ ...styles.codeSplitCell, borderLeftColor: theme.primary }} />
           <View style={{ ...styles.codeSplitCell, borderLeftColor: theme.primary }} />

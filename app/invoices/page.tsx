@@ -88,11 +88,10 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
               <a
                 href={downloadDisabled ? undefined : buildInvoicePdfUrl(selection.items.map((item) => item.id), "all")}
                 aria-disabled={downloadDisabled}
-                className={`inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold transition ${
-                  downloadDisabled
+                className={`inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold transition ${downloadDisabled
                     ? "pointer-events-none border border-black/10 bg-white text-(--ink-muted) opacity-50"
                     : "bg-(--accent-strong) text-white hover:bg-(--accent-deep)"
-                }`}
+                  }`}
               >
                 3点まとめてダウンロード
               </a>
@@ -191,11 +190,10 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
                     <a
                       href={downloadDisabled ? undefined : buildInvoicePdfUrl(selection.items.map((item) => item.id), [documentType])}
                       aria-disabled={downloadDisabled}
-                      className={`inline-flex h-11 shrink-0 items-center justify-center rounded-full border px-5 text-sm font-medium transition ${
-                        downloadDisabled
+                      className={`inline-flex h-11 shrink-0 items-center justify-center rounded-full border px-5 text-sm font-medium transition ${downloadDisabled
                           ? "pointer-events-none border-black/10 bg-white text-(--ink-muted) opacity-50"
                           : "border-black/10 bg-white text-(--ink) hover:border-black/20 hover:bg-black/3"
-                      }`}
+                        }`}
                     >
                       ダウンロード
                     </a>
@@ -233,12 +231,9 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
                     </div>
 
                     <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: previewTheme(documentType).primary }}>
-                      <div className="flex h-10 w-47 items-stretch border" style={{ borderColor: previewTheme(documentType).primary }}>
+                      <div className="flex items-center h-10 w-47 border" style={{ borderColor: previewTheme(documentType).primary }}>
                         <div className="flex w-22.5 items-center px-2">得意先コード</div>
-                          <div className="w-auto border-l border-dashed" style={{ borderColor: previewTheme(documentType).primary }} />
-                        {/* {Array.from({ length: 4 }).map((_, index) => (
-                          <div key={`${documentType}-code-${index}`} className="w-5.75 border-l border-dashed" style={{ borderColor: previewTheme(documentType).primary }} />
-                        ))} */}
+                      <div>{selection.groups[0].clientCode}</div>
                       </div>
                       <p>{previewTheme(documentType).intro}</p>
                     </div>
