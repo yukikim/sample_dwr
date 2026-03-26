@@ -1,0 +1,10 @@
+/* Animation.module.css */
+.fadeInTarget {
+  opacity: 0;
+  animation: fadeInCustom 300ms ease-in 500ms forwards;
+}
+
+@keyframes fadeInCustom {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

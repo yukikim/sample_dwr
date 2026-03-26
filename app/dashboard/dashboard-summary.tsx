@@ -126,7 +126,7 @@ export function DashboardSummary() {
         </section>
       ) : null}
 
-      <section className="grid gap-5 md:grid-cols-3">
+      <section className="grid gap-5 md:grid-cols-2">
         <article className="rounded-[1.75rem] border border-white/60 bg-white/85 p-6 shadow-[0_14px_40px_rgba(76,47,33,0.08)]">
           <p className="text-sm text-(--ink-muted)">登録済み日報</p>
           <p className="mt-3 text-2xl font-semibold">{isLoading ? "..." : `${stats.reportCount} 件`}</p>
@@ -153,6 +153,8 @@ export function DashboardSummary() {
           </div>
         </article>
 
+      </section>
+      <section>
         <article className="rounded-[1.75rem] border border-white/60 bg-white/85 p-6 shadow-[0_14px_40px_rgba(76,47,33,0.08)]">
           <p className="text-sm text-(--ink-muted)">有効管理者数 / ポイント</p>
           <p className="mt-3 text-2xl font-semibold">
@@ -198,6 +200,7 @@ export function DashboardSummary() {
             </Link>
           </div>
         </article>
+
       </section>
     </>
   );

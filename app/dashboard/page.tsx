@@ -18,7 +18,7 @@ export default async function DashboardPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-(--ink-muted)">
               Polish-DWR
             </p>
-            <h1 className="text-3xl font-semibold tracking-tight">管理ダッシュボード</h1>
+            <h1 className="text-3xl font-semibold tracking-tight text-main-800">管理ダッシュボード</h1>
             <p className="text-sm text-(--ink-soft)">
               ログイン中: {administrator.name} / {administrator.email}
             </p>

@@ -16,6 +16,37 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --color-main-50: oklch(0.95 0.012 259.597);
+  --color-main-100: oklch(0.858 0.035 259.597);
+  --color-main-200: oklch(0.767 0.06 259.597);
+  --color-main-300: oklch(0.675 0.087 259.597);
+  --color-main-500: oklch(0.583 0.115 259.597);
+  --color-main-700: oklch(0.492 0.099 259.597);
+  --color-main-800: oklch(0.4 0.081 259.597);
+  --color-main-900: oklch(0.309 0.062 259.597);
+  --color-main-950: oklch(0.217 0.044 259.597);
+
+  --color-sub-50: oklch(0.95 0.039 138);
+  --color-sub-100: oklch(0.856 0.104 138);
+  --color-sub-200: oklch(0.762 0.093 138);
+  --color-sub-300: oklch(0.669 0.081 138);
+  --color-sub-500: oklch(0.575 0.07 138);
+  --color-sub-700: oklch(0.481 0.059 138);
+  --color-sub-800: oklch(0.387 0.047 138);
+  --color-sub-900: oklch(0.294 0.036 138);
+  --color-sub-950: oklch(0.2 0.024 138);
+
+  --color-acc-50: oklch(0.91 0.026 0);
+  --color-acc-100: oklch(0.81 0.06 0);
+  --color-acc-200: oklch(0.71 0.103 0);
+  --color-acc-300: oklch(0.61 0.127 0);
+  --color-acc-500: oklch(0.51 0.106 0);
+  --color-acc-700: oklch(0.41 0.085 0);
+  --color-acc-800: oklch(0.31 0.065 0);
+  --color-acc-900: oklch(0.21 0.044 0);
+  --color-acc-950: oklch(0.11 0.023 0);
+
 }
 
 body {
