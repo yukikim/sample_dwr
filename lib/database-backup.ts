@@ -41,6 +41,7 @@ type SerializedDailyWorkReport = {
   workDate: string;
   clientCode: string;
   clientName: string;
+  purchaser: string | null;
   workMinutes: number;
   laborMinutes: number;
   travelMinutes: number;
@@ -142,6 +143,7 @@ function serializeDailyWorkReport(item: {
   workDate: Date;
   clientCode: string;
   clientName: string;
+  purchaser: string | null;
   workMinutes: number;
   laborMinutes: number;
   travelMinutes: number;
@@ -335,6 +337,7 @@ function parseDailyWorkReportRecord(value: unknown) {
     workDate: parseDate(record.workDate, "dailyWorkReports[].workDate"),
     clientCode: parseString(record.clientCode, "dailyWorkReports[].clientCode"),
     clientName: parseString(record.clientName, "dailyWorkReports[].clientName"),
+    purchaser: record.purchaser === undefined ? null : parseNullableString(record.purchaser, "dailyWorkReports[].purchaser"),
     workMinutes: parseInteger(record.workMinutes, "dailyWorkReports[].workMinutes"),
     laborMinutes: parseInteger(record.laborMinutes, "dailyWorkReports[].laborMinutes"),
     travelMinutes: parseInteger(record.travelMinutes, "dailyWorkReports[].travelMinutes"),

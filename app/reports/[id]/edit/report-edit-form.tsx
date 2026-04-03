@@ -19,6 +19,7 @@ type ReportItemResponse = {
       workDate: string;
       clientCode: string;
       clientName: string;
+      purchaser: string | null;
       workMinutes: number;
       laborMinutes: number;
       travelMinutes: number;

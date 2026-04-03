@@ -20,6 +20,7 @@ export type ReportFieldState = {
   workDate: string;
   clientCode: string;
   clientName: string;
+  purchaser: string;
   workMinutes: string;
   laborMinutes: string;
   travelMinutes: string;
@@ -41,6 +42,7 @@ export const initialReportFieldState: ReportFieldState = {
   workDate: new Date().toISOString().slice(0, 10),
   clientCode: "",
   clientName: "",
+  purchaser: "",
   workMinutes: "0",
   laborMinutes: "0",
   travelMinutes: "0",
@@ -61,6 +63,7 @@ export const initialReportFieldState: ReportFieldState = {
 export function createReportPayload(fields: ReportFieldState) {
   return {
     ...fields,
+    purchaser: fields.purchaser === "" ? null : fields.purchaser,
     signerName: fields.signerName === "" ? null : fields.signerName,
     standardMinutes: fields.standardMinutes === "" ? null : fields.standardMinutes,
     points: fields.points === "" ? null : fields.points,
@@ -72,6 +75,7 @@ export function reportFieldsFromItem(item: {
   workDate: string;
   clientCode: string;
   clientName: string;
+  purchaser: string | null;
   workMinutes: number;
   laborMinutes: number;
   travelMinutes: number;
@@ -92,6 +96,7 @@ export function reportFieldsFromItem(item: {
     workDate: item.workDate,
     clientCode: item.clientCode,
     clientName: item.clientName,
+    purchaser: item.purchaser ?? "",
     workMinutes: String(item.workMinutes),
     laborMinutes: String(item.laborMinutes),
     travelMinutes: String(item.travelMinutes),
@@ -337,6 +342,17 @@ export function ReportForm({
                   </option>
                 ))}
               </select>
+            </label>
+
+            <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
+              購入者
+              <input
+                type="text"
+                value={fields.purchaser}
+                onChange={(event) => onFieldChange("purchaser", event.target.value)}
+                className="h-12 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
+                placeholder="客名欄に表示する購入者名"
+              />
             </label>
 
             <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">

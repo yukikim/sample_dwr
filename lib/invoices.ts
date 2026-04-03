@@ -14,6 +14,7 @@ export type InvoiceReportItem = {
   workDate: string;
   clientCode: string;
   clientName: string;
+  purchaser: string | null;
   workCode: string;
   carType: string | null;
   workLocation: string | null;
@@ -66,6 +67,7 @@ function serializeInvoiceReport(report: {
   workDate: Date;
   clientCode: string;
   clientName: string;
+  purchaser: string | null;
   workCode: string;
   carType: string | null;
   workLocation: string | null;
@@ -83,6 +85,7 @@ function serializeInvoiceReport(report: {
     workDate: report.workDate.toISOString().slice(0, 10),
     clientCode: report.clientCode,
     clientName: report.clientName,
+    purchaser: report.purchaser,
     workCode: report.workCode,
     carType: report.carType,
     workLocation: report.workLocation,
@@ -145,6 +148,7 @@ export async function getInvoiceSelectionData(selectedIds: string[]): Promise<In
       workDate: true,
       clientCode: true,
       clientName: true,
+      purchaser: true,
       workCode: true,
       carType: true,
       workLocation: true,

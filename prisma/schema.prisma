@@ -83,6 +83,7 @@ model DailyWorkReport {
   workDate       DateTime       @map("work_date") @db.Date
   clientCode     String         @map("client_code") @db.VarChar(50)
   clientName     String         @map("client_name") @db.VarChar(255)
+  purchaser      String?        @map("purchaser") @db.VarChar(255)
   workMinutes    Int            @default(0) @map("work_minutes")
   laborMinutes   Int            @default(0) @map("labor_minutes")
   travelMinutes  Int            @default(0) @map("travel_minutes")
@@ -106,6 +107,7 @@ model DailyWorkReport {
   @@index([workDate], map: "idx_dwr_work_date")
   @@index([clientCode], map: "idx_dwr_client_code")
   @@index([clientName], map: "idx_dwr_client_name")
+  @@index([purchaser], map: "idx_dwr_purchaser")
   @@index([workCode], map: "idx_dwr_work_code")
   @@index([workLocation], map: "idx_dwr_work_location")
   @@index([customerStatus], map: "idx_dwr_customer_status")

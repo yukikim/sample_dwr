@@ -19,6 +19,7 @@ export type ReportInput = {
   workDate?: unknown;
   clientCode?: unknown;
   clientName?: unknown;
+  purchaser?: unknown;
   workMinutes?: unknown;
   laborMinutes?: unknown;
   travelMinutes?: unknown;
@@ -50,6 +51,7 @@ export type ValidatedReportInput = {
   workDate: Date;
   clientCode: string;
   clientName: string;
+  purchaser: string | null;
   workMinutes: number;
   laborMinutes: number;
   travelMinutes: number;
@@ -175,6 +177,7 @@ export function validateCreateReportInput(input: ReportInput): ValidationSuccess
   const workDate = parseDate(input.workDate);
   const clientCode = parseRequiredString(input.clientCode, "clientCode", errors);
   const clientName = parseRequiredString(input.clientName, "clientName", errors);
+  const purchaser = parseOptionalString(input.purchaser);
   const carType = parseRequiredString(input.carType, "carType", errors);
   const workLocation = parseRequiredString(input.workLocation, "workLocation", errors);
   const signerName = parseOptionalString(input.signerName);
@@ -211,6 +214,7 @@ export function validateCreateReportInput(input: ReportInput): ValidationSuccess
       workDate,
       clientCode,
       clientName,
+      purchaser,
       workMinutes,
       laborMinutes,
       travelMinutes,
@@ -258,6 +262,10 @@ export function validateUpdateReportInput(input: ReportInput): ValidationSuccess
 
   if (input.clientName !== undefined) {
     data.clientName = parseRequiredString(input.clientName, "clientName", errors);
+  }
+
+  if (input.purchaser !== undefined) {
+    data.purchaser = parseOptionalString(input.purchaser);
   }
 
   if (input.workMinutes !== undefined) {
@@ -344,6 +352,7 @@ export function serializeReport(report: {
   workDate: Date;
   clientCode: string;
   clientName: string;
+  purchaser: string | null;
   workMinutes: number;
   laborMinutes: number;
   travelMinutes: number;
@@ -368,6 +377,7 @@ export function serializeReport(report: {
     workDate: report.workDate.toISOString().slice(0, 10),
     clientCode: report.clientCode,
     clientName: report.clientName,
+    purchaser: report.purchaser,
     workMinutes: report.workMinutes,
     laborMinutes: report.laborMinutes,
     travelMinutes: report.travelMinutes,

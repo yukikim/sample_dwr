@@ -32,7 +32,7 @@ type PdfLineItem = {
   id: string;
   carType: string;
   identifier: string;
-  clientName: string;
+  purchaser: string;
   workDescription: string;
   amount: string;
   summary: string;
@@ -439,7 +439,7 @@ function buildLineItems(documentType: InvoiceDocumentType, group: InvoiceClientG
       id: item.id,
       carType: item.carType ?? "",
       identifier: item.vehicleIdentifier ?? "",
-      clientName: group.clientName,
+      purchaser: item.purchaser ?? group.clientName,
       workDescription: workParts.join(" / "),
       amount: formatCurrency(item.salesAmount),
       summary: item.remarks ?? item.workDate,
@@ -452,7 +452,7 @@ function buildPlaceholderLineItems(count: number): PdfLineItem[] {
     id: `placeholder-${index}`,
     carType: "",
     identifier: "",
-    clientName: "",
+    purchaser: "",
     workDescription: "",
     amount: "",
     summary: "",
@@ -588,7 +588,7 @@ function DocumentPage({
               <Text style={{ ...styles.detailText, color: theme.primary }}>{item.identifier}</Text>
             </View>
             <View style={{ ...styles.detailCell, width: "13%", borderRightColor: theme.primary }}>
-              <Text style={{ ...styles.detailText, color: theme.primary }}>{item.clientName}</Text>
+              <Text style={{ ...styles.detailText, color: theme.primary }}>{item.purchaser}</Text>
             </View>
             <View style={{ ...styles.detailCell, width: "18%", borderRightColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{item.workDescription}</Text>
