@@ -55,7 +55,7 @@ export type ValidatedReportInput = {
   travelMinutes: number;
   carType: string;
   workLocation: string;
-  signerName: string;
+  signerName: string | null;
   vehicleIdentifier: string;
   workCode: string;
   customerStatus: CustomerStatus;
@@ -177,7 +177,7 @@ export function validateCreateReportInput(input: ReportInput): ValidationSuccess
   const clientName = parseRequiredString(input.clientName, "clientName", errors);
   const carType = parseRequiredString(input.carType, "carType", errors);
   const workLocation = parseRequiredString(input.workLocation, "workLocation", errors);
-  const signerName = parseRequiredString(input.signerName, "signerName", errors);
+  const signerName = parseOptionalString(input.signerName);
   const vehicleIdentifier = parseRequiredString(input.vehicleIdentifier, "vehicleIdentifier", errors);
   const workCode = parseRequiredString(input.workCode, "workCode", errors);
   const workMinutes = parseRequiredNonNegativeInt(input.workMinutes, "workMinutes", errors);
@@ -281,7 +281,7 @@ export function validateUpdateReportInput(input: ReportInput): ValidationSuccess
   }
 
   if (input.signerName !== undefined) {
-    data.signerName = parseRequiredString(input.signerName, "signerName", errors);
+    data.signerName = parseOptionalString(input.signerName);
   }
 
   if (input.vehicleIdentifier !== undefined) {

@@ -61,6 +61,7 @@ export const initialReportFieldState: ReportFieldState = {
 export function createReportPayload(fields: ReportFieldState) {
   return {
     ...fields,
+    signerName: fields.signerName === "" ? null : fields.signerName,
     standardMinutes: fields.standardMinutes === "" ? null : fields.standardMinutes,
     points: fields.points === "" ? null : fields.points,
     remarks: fields.remarks === "" ? null : fields.remarks,
@@ -406,7 +407,6 @@ export function ReportForm({
                 type="text"
                 value={fields.signerName}
                 onChange={(event) => onFieldChange("signerName", event.target.value)}
-                required
                 className="h-12 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
                 placeholder="山田 太郎"
               />
