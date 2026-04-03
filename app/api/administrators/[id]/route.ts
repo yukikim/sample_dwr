@@ -104,6 +104,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     name?: string;
     email?: string;
     passwordHash?: string;
+    authVersion?: {
+      increment: number;
+    };
     isActive?: boolean;
   } = {};
 
@@ -117,6 +120,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   if (validatedInput.data.password) {
     data.passwordHash = await bcrypt.hash(validatedInput.data.password, 12);
+    data.authVersion = { increment: 1 };
   }
 
   if (validatedInput.data.isActive !== undefined) {

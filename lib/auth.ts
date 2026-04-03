@@ -12,6 +12,7 @@ const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 type SessionPayload = {
   administratorId: string;
+  authVersion: number;
   expiresAt: number;
 };
 
@@ -119,8 +120,22 @@ export async function verifyAdministratorCredentials(email: string, password: st
 }
 
 export async function createAdministratorSession(administratorId: string) {
+  const administrator = await prisma.administrator.findFirst({
+    where: {
+      id: administratorId,
+      isActive: true,
+    },
+    select: {
+      authVersion: true,
+    },
+  });
+
+  if (!administrator) {
+    throw new Error("Active administrator not found.");
+  }
+
   const expiresAt = Date.now() + SESSION_TTL_SECONDS * 1000;
-  const token = encodeSession({ administratorId, expiresAt });
+  const token = encodeSession({ administratorId, authVersion: administrator.authVersion, expiresAt });
   const cookieStore = await cookies();
 
   cookieStore.set(SESSION_COOKIE_NAME, token, {
@@ -155,6 +170,7 @@ export async function getCurrentAdministrator() {
     where: {
       id: session.administratorId,
       isActive: true,
+      authVersion: session.authVersion,
     },
     select: {
       id: true,
