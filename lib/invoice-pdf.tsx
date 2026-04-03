@@ -73,15 +73,15 @@ const A5_LANDSCAPE_SIZE = {
   height: 419.53*2,
 } as const;
 
-const DETAIL_ROW_COUNT = 10;
+const DETAIL_ROW_COUNT = 20;
 
 let fontRegistered = false;
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 28,
+    paddingTop: 24,
     paddingRight: 24,
-    paddingBottom: 18,
+    paddingBottom: 16,
     paddingLeft: 24,
     backgroundColor: "#ffffff",
     color: "#2a221d",
@@ -90,48 +90,48 @@ const styles = StyleSheet.create({
   },
   titleWrap: {
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: 16,
   },
   title: {
-    fontSize: 24,
+    fontSize: 21,
     fontWeight: 700,
-    letterSpacing: 10,
+    letterSpacing: 8,
     paddingBottom: 4,
-    paddingLeft: 10,
+    paddingLeft: 8,
   },
   titleRule: {
-    width: 148,
+    width: 164,
     borderBottomWidth: 1,
     borderBottomStyle: "solid",
   },
   topSection: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 10,
+    marginBottom: 12,
   },
   recipientBlock: {
-    width: "48%",
-    paddingTop: 38,
+    width: "58%",
+    paddingTop: 28,
   },
   recipientLine: {
     borderBottomWidth: 1,
     borderBottomStyle: "solid",
-    paddingBottom: 6,
+    paddingBottom: 5,
     paddingRight: 6,
-    alignItems: "flex-end",
+    alignItems: "flex-start",
   },
   recipientName: {
-    fontSize: 23,
+    fontSize: 21,
     fontWeight: 700,
   },
   issuerBlock: {
     width: "34%",
-    paddingTop: 16,
+    paddingTop: 6,
   },
   issuerTitle: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: 700,
-    marginBottom: 6,
+    marginBottom: 5,
   },
   issuerText: {
     fontSize: 9,
@@ -140,23 +140,23 @@ const styles = StyleSheet.create({
   },
   dateRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 8,
+    alignItems: "flex-end",
+    marginBottom: 10,
   },
   dateUnit: {
     flexDirection: "row",
     width: 28,
-    alignItems: "flex-start",
-    marginRight: 14,
+    alignItems: "flex-end",
+    marginRight: 12,
   },
   dateUnitLast: {
     flexDirection: "row",
     width: 28,
-    alignItems: "flex-start",
+    alignItems: "flex-end",
   },
   dateLabel: {
     fontSize: 8,
-    marginBottom: 4,
+    marginBottom: 1,
   },
   dateValue: {
     width: "100%",
@@ -169,11 +169,11 @@ const styles = StyleSheet.create({
   codeAndIntroRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   codeBox: {
-    width: 188,
-    minHeight: 30,
+    width: 196,
+    minHeight: 32,
     borderWidth: 1,
     borderStyle: "solid",
     flexDirection: "row",
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   codeLabelCell: {
-    width: 90,
+    width: 94,
     justifyContent: "center",
     paddingLeft: 8,
     fontSize: 9,
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: "row",
-    minHeight: 34,
+    minHeight: 28,
   },
   headerCell: {
     justifyContent: "center",
@@ -209,27 +209,25 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightStyle: "solid",
     borderRightColor: "#ffffff",
-    paddingTop: 4,
-    paddingBottom: 4,
+    paddingTop: 3,
+    paddingBottom: 3,
     paddingLeft: 4,
     paddingRight: 4,
   },
   headerCellText: {
     color: "#ffffff",
-    fontSize: 8.5,
+    fontSize: 8,
     fontWeight: 700,
   },
   detailRow: {
     flexDirection: "row",
-    // minHeight: 66,
-    // minHeight: 32,
-    height: 46,
+    height: 22,
     borderTopWidth: 1,
     borderTopStyle: "solid",
   },
   detailCell: {
-    paddingTop: 6,
-    paddingBottom: 6,
+    paddingTop: 3,
+    paddingBottom: 3,
     paddingLeft: 4,
     paddingRight: 4,
     borderRightWidth: 1,
@@ -243,7 +241,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   detailText: {
-    fontSize: 8,
+    fontSize: 7,
   },
   amountGuide: {
     position: "absolute",
@@ -267,16 +265,16 @@ const styles = StyleSheet.create({
     borderBottomStyle: "solid",
   },
   bottomLeft: {
-    width: "66%",
+    width: "65.2%",
   },
   bottomRight: {
-    width: "34%",
+    width: "34.8%",
     borderLeftWidth: 1,
     borderLeftStyle: "solid",
   },
   bottomRow: {
     flexDirection: "row",
-    minHeight: 33,
+    minHeight: 28,
     borderTopWidth: 1,
     borderTopStyle: "solid",
   },
@@ -426,21 +424,12 @@ function buildIssueDateParts() {
 
 function buildLineItems(documentType: InvoiceDocumentType, group: InvoiceClientGroup, rows: InvoiceClientGroup["items"]): PdfLineItem[] {
   return rows.map((item) => {
-    const workParts = [item.workCode];
-
-    if (documentType === "invoice") {
-      workParts.push(`数量 ${item.unitCount}`);
-    } else {
-      workParts.push(`作業 ${item.workMinutes}分`);
-      workParts.push(`工数 ${item.laborMinutes}分`);
-    }
-
     return {
       id: item.id,
       carType: item.carType ?? "",
       identifier: item.vehicleIdentifier ?? "",
       purchaser: item.purchaser ?? group.clientName,
-      workDescription: workParts.join(" / "),
+      workDescription: `${item.workCode} / 作業 ${item.workMinutes}分`,
       amount: formatCurrency(item.salesAmount),
       summary: item.remarks ?? item.workDate,
     };
@@ -518,7 +507,7 @@ function DocumentPage({
         <View style={styles.issuerBlock}>
           <Text style={{ ...styles.issuerTitle, color: theme.primary }}>{invoiceIssuer.companyName}</Text>
           <Text style={{ ...styles.issuerText, color: theme.primary }}>{invoiceIssuer.address}</Text>
-          <Text style={{ ...styles.issuerText, color: theme.primary }}>振込先 {invoiceIssuer.transferAccount}</Text>
+          {/* <Text style={{ ...styles.issuerText, color: theme.primary }}>振込先 {invoiceIssuer.transferAccount}</Text> */}
         </View>
       </View>
 
@@ -552,22 +541,22 @@ function DocumentPage({
 
       <View style={{ ...styles.tableFrame, borderColor: theme.primary }}>
         <View style={styles.tableHeader}>
-          <View style={{ ...styles.headerCell, width: "17%", backgroundColor: theme.primary }}>
+          <View style={{ ...styles.headerCell, width: "12%", backgroundColor: theme.primary }}>
             <Text style={styles.headerCellText}>車　種</Text>
           </View>
-          <View style={{ ...styles.headerCell, width: "22%", backgroundColor: theme.primary }}>
+          <View style={{ ...styles.headerCell, width: "12%", backgroundColor: theme.primary }}>
             <Text style={styles.headerCellText}>登録番号又は車体番号</Text>
           </View>
-          <View style={{ ...styles.headerCell, width: "13%", backgroundColor: theme.primary }}>
+          <View style={{ ...styles.headerCell, width: "18%", backgroundColor: theme.primary }}>
             <Text style={styles.headerCellText}>客　名</Text>
           </View>
-          <View style={{ ...styles.headerCell, width: "18%", backgroundColor: theme.primary }}>
+          <View style={{ ...styles.headerCell, width: "23%", backgroundColor: theme.primary }}>
             <Text style={styles.headerCellText}>作業内容</Text>
           </View>
-          <View style={{ ...styles.headerCell, width: "17%", backgroundColor: theme.primary }}>
+          <View style={{ ...styles.headerCell, width: "12%", backgroundColor: theme.primary }}>
             <Text style={styles.headerCellText}>金　額</Text>
           </View>
-          <View style={{ ...styles.headerCell, width: "13%", backgroundColor: theme.primary, borderRightWidth: 0 }}>
+          <View style={{ ...styles.headerCell, width: "23%", backgroundColor: theme.primary, borderRightWidth: 0 }}>
             <Text style={styles.headerCellText}>摘　要</Text>
           </View>
         </View>
@@ -581,19 +570,19 @@ function DocumentPage({
               backgroundColor: rowIndex % 2 === 1 ? theme.soft : "#ffffff",
             }}
           >
-            <View style={{ ...styles.detailCell, ...styles.detailCellCenter, width: "17%", borderRightColor: theme.primary }}>
+            <View style={{ ...styles.detailCell, ...styles.detailCellCenter, width: "12%", borderRightColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{item.carType}</Text>
             </View>
-            <View style={{ ...styles.detailCell, width: "22%", borderRightColor: theme.primary }}>
+            <View style={{ ...styles.detailCell, width: "12%", borderRightColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{item.identifier}</Text>
             </View>
-            <View style={{ ...styles.detailCell, width: "13%", borderRightColor: theme.primary }}>
+            <View style={{ ...styles.detailCell, width: "18%", borderRightColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{item.purchaser}</Text>
             </View>
-            <View style={{ ...styles.detailCell, width: "18%", borderRightColor: theme.primary }}>
+            <View style={{ ...styles.detailCell, width: "23%", borderRightColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{item.workDescription}</Text>
             </View>
-            <View style={{ ...styles.detailCell, ...styles.detailCellRight, width: "17%", borderRightColor: theme.primary, position: "relative" }}>
+            <View style={{ ...styles.detailCell, ...styles.detailCellRight, width: "12%", borderRightColor: theme.primary, position: "relative" }}>
               {/* <View style={styles.amountGuide}>
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
@@ -601,7 +590,7 @@ function DocumentPage({
               </View> */}
               <Text style={{ ...styles.detailText, color: theme.primary }}>{item.amount}</Text>
             </View>
-            <View style={{ ...styles.detailCell, width: "13%", borderRightWidth: 0 }}>
+            <View style={{ ...styles.detailCell, width: "23%", borderRightWidth: 0 }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{item.summary}</Text>
             </View>
           </View>
@@ -611,31 +600,31 @@ function DocumentPage({
       <View style={{ ...styles.bottomArea, borderLeftColor: theme.primary, borderRightColor: theme.primary, borderBottomColor: theme.primary }}>
         <View style={styles.bottomLeft}>
           <View style={{ ...styles.bottomRow, borderTopWidth: 0 }}>
-            <View style={{ ...styles.bottomLabelCell, backgroundColor: theme.soft }}>
+            <View style={{ ...styles.bottomLabelCell, width: "20%", backgroundColor: theme.soft }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>作業場所</Text>
             </View>
-            <View style={{ ...styles.bottomValueCell, borderLeftColor: theme.primary }}>
+            <View style={{ ...styles.bottomValueCell, width: "47%", borderLeftColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.workLocation}</Text>
             </View>
-            <View style={{ ...styles.bottomLabelCellWide, borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.primary }}>
+            <View style={{ ...styles.bottomLabelCellWide, width: "13%", borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: "#ffffff" }}>担当者(サイン)</Text>
             </View>
-            <View style={{ ...styles.bottomValueCell, borderLeftColor: theme.primary }}>
+            <View style={{ ...styles.bottomValueCell, width: "20%", borderLeftColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.signLabel}</Text>
             </View>
           </View>
 
           <View style={{ ...styles.bottomRow, borderTopColor: theme.primary }}>
-            <View style={{ ...styles.bottomLabelCell, backgroundColor: theme.soft }}>
+            <View style={{ ...styles.bottomLabelCell, width: "20%", backgroundColor: theme.soft }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>記入者(作業者)</Text>
             </View>
-            <View style={{ ...styles.bottomValueCell, borderLeftColor: theme.primary }}>
+            <View style={{ ...styles.bottomValueCell, width: "47%", borderLeftColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.workerName}</Text>
             </View>
-            <View style={{ ...styles.bottomLabelCellWide, borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.soft }}>
+            <View style={{ ...styles.bottomLabelCellWide, width: "13%", borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.soft }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>消費税(10%)</Text>
             </View>
-            <View style={{ ...styles.bottomValueCellAmount, borderLeftColor: theme.primary, position: "relative" }}>
+            <View style={{ ...styles.bottomValueCellAmount, width: "20%", borderLeftColor: theme.primary, position: "relative" }}>
               <View style={styles.bottomAmountGuide}>
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
@@ -648,10 +637,10 @@ function DocumentPage({
 
         <View style={{ ...styles.bottomRight, borderLeftColor: theme.primary }}>
           <View style={{ ...styles.bottomRow, borderTopWidth: 0 }}>
-            <View style={{ ...styles.bottomLabelCellWide, backgroundColor: theme.soft }}>
+            <View style={{ ...styles.bottomLabelCellWide, width: "35%", backgroundColor: theme.soft }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>10%対象小計</Text>
             </View>
-            <View style={{ ...styles.bottomValueCellAmount, borderLeftColor: theme.primary, position: "relative" }}>
+            <View style={{ ...styles.bottomValueCellAmount, width: "65%", borderLeftColor: theme.primary, position: "relative" }}>
               <View style={styles.bottomAmountGuide}>
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
@@ -662,10 +651,10 @@ function DocumentPage({
           </View>
 
           <View style={{ ...styles.bottomRow, borderTopColor: theme.primary }}>
-            <View style={{ ...styles.bottomLabelCellWide, backgroundColor: theme.soft }}>
+            <View style={{ ...styles.bottomLabelCellWide, width: "35%", backgroundColor: theme.soft }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>合計金額</Text>
             </View>
-            <View style={{ ...styles.bottomValueCellAmount, borderLeftColor: theme.primary, position: "relative" }}>
+            <View style={{ ...styles.bottomValueCellAmount, width: "65%", borderLeftColor: theme.primary, position: "relative" }}>
               {/* <View style={styles.bottomAmountGuide}>
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />

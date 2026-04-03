@@ -213,7 +213,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
                       <div className="w-[34%] text-left" style={{ color: previewTheme(documentType).primary }}>
                         <p className="text-2xl font-semibold">{invoiceIssuer.companyName}</p>
                         <p className="mt-1 text-xs">{invoiceIssuer.address}</p>
-                        <p className="mt-1 text-xs">振込先 {invoiceIssuer.transferAccount}</p>
+                        {/* <p className="mt-1 text-xs">振込先 {invoiceIssuer.transferAccount}</p> */}
                       </div>
                     </div>
 
@@ -239,7 +239,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
                     </div>
 
                     <div className="mt-3 overflow-hidden border" style={{ borderColor: previewTheme(documentType).primary }}>
-                      <div className="grid min-h-8 grid-cols-[17%_22%_13%_18%_17%_13%] text-center text-xs font-semibold text-white" style={{ backgroundColor: previewTheme(documentType).primary }}>
+                      <div className="grid min-h-8 grid-cols-[12%_12%_18%_23%_12%_23%] text-center text-xs font-semibold text-white" style={{ backgroundColor: previewTheme(documentType).primary }}>
                         <div className="flex items-center justify-center border-r border-white/80">車種</div>
                         <div className="flex items-center justify-center border-r border-white/80">登録番号又は車体番号</div>
                         <div className="flex items-center justify-center border-r border-white/80">客名</div>
@@ -248,13 +248,13 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
                         <div className="flex items-center justify-center">摘要</div>
                       </div>
 
-                      {Array.from({ length: 10 }).map((_, rowIndex) => {
+                      {Array.from({ length: 20 }).map((_, rowIndex) => {
                         const item = selection.groups[0]?.items[rowIndex];
 
                         return (
                           <div
                             key={`${documentType}-row-${rowIndex}`}
-                            className="grid min-h-16 grid-cols-[17%_22%_13%_18%_17%_13%] text-xs"
+                            className="grid h-8 min-h-8 overflow-hidden grid-cols-[12%_12%_18%_23%_12%_23%] text-xs"
                             style={{
                               color: previewTheme(documentType).primary,
                               backgroundColor: rowIndex % 2 === 1 ? previewTheme(documentType).soft : "#ffffff",
@@ -272,15 +272,15 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
                       })}
                     </div>
 
-                    <div className="grid min-h-16 grid-cols-[66%_34%] border-x border-b text-xs" style={{ borderColor: previewTheme(documentType).primary, color: previewTheme(documentType).primary }}>
+                    <div className="grid min-h-16 grid-cols-[65.2%_34.8%] border-x border-b text-xs" style={{ borderColor: previewTheme(documentType).primary, color: previewTheme(documentType).primary }}>
                       <div>
-                        <div className="grid grid-cols-[74px_1fr_108px_1fr] border-b" style={{ borderColor: previewTheme(documentType).primary }}>
+                        <div className="grid grid-cols-[141px_356px_100px_160px] border-b" style={{ borderColor: previewTheme(documentType).primary }}>
                           <div className="px-2 py-2" style={{ backgroundColor: previewTheme(documentType).soft }}>作業場所</div>
                           <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{selection.groups[0]?.items.map((item) => item.workLocation).filter(Boolean).filter((value, index, array) => array.indexOf(value) === index).join(" / ") || "-"}</div>
                           <div className="border-l px-2 py-2 text-white" style={{ borderColor: previewTheme(documentType).primary, backgroundColor: previewTheme(documentType).primary }}>担当者(サイン)</div>
                           <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{selection.groups[0]?.items.map((item) => item.signerName).filter(Boolean).filter((value, index, array) => array.indexOf(value) === index).join(" / ") || "-"}</div>
                         </div>
-                        <div className="grid grid-cols-[74px_1fr_108px_1fr]" style={{ borderColor: previewTheme(documentType).primary }}>
+                        <div className="grid grid-cols-[141px_356px_100px_160px]" style={{ borderColor: previewTheme(documentType).primary }}>
                           <div className="px-2 py-2" style={{ backgroundColor: previewTheme(documentType).soft }}>記入者(作業者)</div>
                           <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{administrator.name}</div>
                           <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary, backgroundColor: previewTheme(documentType).soft }}>消費税(10%)</div>
@@ -289,11 +289,11 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
                       </div>
 
                       <div className="border-l" style={{ borderColor: previewTheme(documentType).primary }}>
-                        <div className="grid grid-cols-[108px_1fr] border-b" style={{ borderColor: previewTheme(documentType).primary }}>
+                        <div className="grid grid-cols-[140px_260px] border-b" style={{ borderColor: previewTheme(documentType).primary }}>
                           <div className="px-2 py-2" style={{ backgroundColor: previewTheme(documentType).soft }}>10%対象小計</div>
                           <div className="border-l px-2 py-2 text-right" style={{ borderColor: previewTheme(documentType).primary }}>{formatCurrency(selection.groups[0]?.totalSalesAmount ?? 0)}</div>
                         </div>
-                        <div className="grid grid-cols-[108px_1fr]" style={{ borderColor: previewTheme(documentType).primary }}>
+                        <div className="grid grid-cols-[140px_260px]" style={{ borderColor: previewTheme(documentType).primary }}>
                           <div className="px-2 py-2" style={{ backgroundColor: previewTheme(documentType).soft }}>合計金額</div>
                           <div className="border-l px-2 py-2 text-right" style={{ borderColor: previewTheme(documentType).primary }}>{formatCurrency((selection.groups[0]?.totalSalesAmount ?? 0) + Math.floor((selection.groups[0]?.totalSalesAmount ?? 0) * 0.1))}</div>
                         </div>
