@@ -428,7 +428,7 @@ export function ReportForm({
               />
             </label>
 
-            <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
+            <label className="hidden flex flex-col gap-2 text-sm text-(--ink-soft)">
               作業分
               <input
                 type="number"
@@ -440,7 +440,7 @@ export function ReportForm({
               />
             </label>
 
-            <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
+            <label className="hidden flex flex-col gap-2 text-sm text-(--ink-soft)">
               工数分
               <input
                 type="number"
@@ -452,7 +452,7 @@ export function ReportForm({
               />
             </label>
 
-            <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
+            <label className="hidden flex flex-col gap-2 text-sm text-(--ink-soft)">
               移動分
               <input
                 type="number"
@@ -489,7 +489,7 @@ export function ReportForm({
               />
             </label>
 
-            <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
+            <label className="hidden flex flex-col gap-2 text-sm text-(--ink-soft)">
               基準分
               <input
                 type="number"
@@ -500,7 +500,7 @@ export function ReportForm({
               />
             </label>
 
-            <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
+            <label className="hidden flex flex-col gap-2 text-sm text-(--ink-soft)">
               ポイント
               <input
                 type="number"
