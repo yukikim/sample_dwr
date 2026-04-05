@@ -1207,12 +1207,12 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                   {visibleColumns.customerStatus ? <th className="px-4 py-2 whitespace-nowrap">状態</th> : null}
                   {visibleColumns.billingStatus ? <th className="px-4 py-2 whitespace-nowrap">請求処理</th> : null}
                   {visibleColumns.salesAmount ? <th className="px-4 py-2 whitespace-nowrap">売上</th> : null}
-                  {visibleColumns.workMinutes ? <th className="px-4 py-2 whitespace-nowrap">作業分</th> : null}
+                  {/* {visibleColumns.workMinutes ? <th className="px-4 py-2 whitespace-nowrap">作業分</th> : null}
                   {visibleColumns.laborMinutes ? <th className="px-4 py-2 whitespace-nowrap">工数分</th> : null}
-                  {visibleColumns.travelMinutes ? <th className="px-4 py-2 whitespace-nowrap">移動分</th> : null}
+                  {visibleColumns.travelMinutes ? <th className="px-4 py-2 whitespace-nowrap">移動分</th> : null} */}
                   {visibleColumns.unitCount ? <th className="px-4 py-2 whitespace-nowrap">台数</th> : null}
-                  {visibleColumns.standardMinutes ? <th className="px-4 py-2 whitespace-nowrap">基準分</th> : null}
-                  {visibleColumns.points ? <th className="px-4 py-2 whitespace-nowrap">ポイント</th> : null}
+                  {/* {visibleColumns.standardMinutes ? <th className="px-4 py-2 whitespace-nowrap">基準分</th> : null}
+                  {visibleColumns.points ? <th className="px-4 py-2 whitespace-nowrap">ポイント</th> : null} */}
                   {visibleColumns.remarks ? <th className="px-4 py-2 whitespace-nowrap">備考</th> : null}
                   <th className="px-4 py-2 whitespace-nowrap">操作</th>
                 </tr>
@@ -1259,12 +1259,12 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                         </label>
                       </td> : null}
                       {visibleColumns.salesAmount ? <td className="px-4 py-4 text-sm whitespace-nowrap">{formatCurrency(item.salesAmount)}</td> : null}
-                      {visibleColumns.workMinutes ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.workMinutes}</td> : null}
+                      {/* {visibleColumns.workMinutes ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.workMinutes}</td> : null}
                       {visibleColumns.laborMinutes ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.laborMinutes}</td> : null}
-                      {visibleColumns.travelMinutes ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.travelMinutes}</td> : null}
+                      {visibleColumns.travelMinutes ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.travelMinutes}</td> : null} */}
                       {visibleColumns.unitCount ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.unitCount}</td> : null}
-                      {visibleColumns.standardMinutes ? <td className="px-4 py-4 text-sm whitespace-nowrap">{formatOptionalNumber(item.standardMinutes)}</td> : null}
-                      {visibleColumns.points ? <td className="px-4 py-4 text-sm whitespace-nowrap">{formatOptionalNumber(item.points)}</td> : null}
+                      {/* {visibleColumns.standardMinutes ? <td className="px-4 py-4 text-sm whitespace-nowrap">{formatOptionalNumber(item.standardMinutes)}</td> : null}
+                      {visibleColumns.points ? <td className="px-4 py-4 text-sm whitespace-nowrap">{formatOptionalNumber(item.points)}</td> : null} */}
                       {visibleColumns.remarks ? <td className="px-4 py-4 text-sm text-(--ink-soft) min-w-55">{item.remarks ?? "-"}</td> : null}
                       <td className="rounded-r-3xl px-4 py-4 text-sm whitespace-nowrap">
                         <div className="flex flex-wrap gap-2">
