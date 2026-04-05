@@ -264,9 +264,9 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
                             <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{item?.carType ?? ""}</div>
                             <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{item?.vehicleIdentifier ?? ""}</div>
                             <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{item ? (item.purchaser ?? selection.groups[0]?.clientName ?? "") : ""}</div>
-                            <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{item ? `${item.workCode} / 作業 ${item.workMinutes}分` : ""}</div>
+                            <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{item ? item.workCode : ""}</div>
                             <div className="border-r px-2 py-2 text-right" style={{ borderColor: previewTheme(documentType).primary }}>{item ? formatCurrency(item.salesAmount) : ""}</div>
-                            <div className="px-2 py-2">{item?.remarks ?? item?.workDate ?? ""}</div>
+                            <div className="px-2 py-2">{item?.remarks ?? ""}</div>
                           </div>
                         );
                       })}

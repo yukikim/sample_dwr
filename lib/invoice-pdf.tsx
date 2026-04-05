@@ -429,9 +429,9 @@ function buildLineItems(documentType: InvoiceDocumentType, group: InvoiceClientG
       carType: item.carType ?? "",
       identifier: item.vehicleIdentifier ?? "",
       purchaser: item.purchaser ?? group.clientName,
-      workDescription: `${item.workCode} / 作業 ${item.workMinutes}分`,
+      workDescription: item.workCode,
       amount: formatCurrency(item.salesAmount),
-      summary: item.remarks ?? item.workDate,
+      summary: item.remarks ?? "",
     };
   });
 }
@@ -541,10 +541,10 @@ function DocumentPage({
 
       <View style={{ ...styles.tableFrame, borderColor: theme.primary }}>
         <View style={styles.tableHeader}>
-          <View style={{ ...styles.headerCell, width: "12%", backgroundColor: theme.primary }}>
+          <View style={{ ...styles.headerCell, width: "10%", backgroundColor: theme.primary }}>
             <Text style={styles.headerCellText}>車　種</Text>
           </View>
-          <View style={{ ...styles.headerCell, width: "12%", backgroundColor: theme.primary }}>
+          <View style={{ ...styles.headerCell, width: "14%", backgroundColor: theme.primary }}>
             <Text style={styles.headerCellText}>登録番号又は車体番号</Text>
           </View>
           <View style={{ ...styles.headerCell, width: "18%", backgroundColor: theme.primary }}>
@@ -570,10 +570,10 @@ function DocumentPage({
               backgroundColor: rowIndex % 2 === 1 ? theme.soft : "#ffffff",
             }}
           >
-            <View style={{ ...styles.detailCell, ...styles.detailCellCenter, width: "12%", borderRightColor: theme.primary }}>
+            <View style={{ ...styles.detailCell, ...styles.detailCellCenter, width: "10%", borderRightColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{item.carType}</Text>
             </View>
-            <View style={{ ...styles.detailCell, width: "12%", borderRightColor: theme.primary }}>
+            <View style={{ ...styles.detailCell, width: "14%", borderRightColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{item.identifier}</Text>
             </View>
             <View style={{ ...styles.detailCell, width: "18%", borderRightColor: theme.primary }}>
