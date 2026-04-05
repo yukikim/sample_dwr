@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   recipientName: {
-    fontSize: 21,
+    fontSize: 14,
     fontWeight: 700,
   },
   issuerBlock: {
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   issuerTitle: {
-    fontSize: 19,
+    fontSize: 17,
     fontWeight: 700,
     marginBottom: 5,
   },
@@ -145,18 +145,25 @@ const styles = StyleSheet.create({
   },
   dateUnit: {
     flexDirection: "row",
-    width: 28,
+    width: 46,
     alignItems: "flex-end",
-    marginRight: 12,
+    marginRight: 14,
   },
   dateUnitLast: {
     flexDirection: "row",
-    width: 28,
+    width: 52,
     alignItems: "flex-end",
   },
   dateLabel: {
     fontSize: 8,
-    marginBottom: 1,
+    marginLeft: 4,
+    lineHeight: 1,
+  },
+  dateNum: {
+    fontSize: 12,
+    minWidth: 20,
+    textAlign: "right",
+    lineHeight: 1,
   },
   dateValue: {
     width: "100%",
@@ -226,8 +233,8 @@ const styles = StyleSheet.create({
     borderTopStyle: "solid",
   },
   detailCell: {
-    paddingTop: 3,
-    paddingBottom: 3,
+    paddingTop: 2.5,
+    paddingBottom: 2.5,
     paddingLeft: 4,
     paddingRight: 4,
     borderRightWidth: 1,
@@ -241,7 +248,11 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   detailText: {
-    fontSize: 7,
+    fontSize: 9.0,
+  },
+  emphasisAmountText: {
+    fontSize: 12,
+    fontWeight: 700,
   },
   amountGuide: {
     position: "absolute",
@@ -369,8 +380,8 @@ function chunkItems<T>(items: T[], size: number) {
 function getDocumentTheme(documentType: InvoiceDocumentType): DocumentTheme {
   if (documentType === "work-slip") {
     return {
-      primary: "#0ea56f",
-      soft: "#dceee2",
+      primary: "#232323",
+      soft: "#cdcfce",
       intro: "下記の通り受注致しました",
     };
   }
@@ -513,15 +524,15 @@ function DocumentPage({
 
       <View style={styles.dateRow}>
         <View style={styles.dateUnit}>
-          <Text style={{ color: theme.primary }}>{issueDate.year}</Text>
+          <Text style={{ ...styles.dateNum, color: theme.primary }}>{issueDate.year}</Text>
           <Text style={{ ...styles.dateLabel, color: theme.primary }}>年</Text>
         </View>
         <View style={styles.dateUnit}>
-          <Text style={{ color: theme.primary }}>{issueDate.month}</Text>
+          <Text style={{ ...styles.dateNum, color: theme.primary }}>{issueDate.month}</Text>
           <Text style={{ ...styles.dateLabel, color: theme.primary }}>月</Text>
         </View>
         <View style={styles.dateUnitLast}>
-          <Text style={{ color: theme.primary }}>{issueDate.day}</Text>
+          <Text style={{ ...styles.dateNum, color: theme.primary }}>{issueDate.day}</Text>
           <Text style={{ ...styles.dateLabel, color: theme.primary }}>日</Text>
         </View>
       </View>
@@ -603,10 +614,10 @@ function DocumentPage({
             <View style={{ ...styles.bottomLabelCell, width: "20%", backgroundColor: theme.soft }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>作業場所</Text>
             </View>
-            <View style={{ ...styles.bottomValueCell, width: "47%", borderLeftColor: theme.primary }}>
+            <View style={{ ...styles.bottomValueCell, width: "42%", borderLeftColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.workLocation}</Text>
             </View>
-            <View style={{ ...styles.bottomLabelCellWide, width: "13%", borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.primary }}>
+            <View style={{ ...styles.bottomLabelCellWide, width: "18%", borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: "#ffffff" }}>担当者(サイン)</Text>
             </View>
             <View style={{ ...styles.bottomValueCell, width: "20%", borderLeftColor: theme.primary }}>
@@ -618,10 +629,10 @@ function DocumentPage({
             <View style={{ ...styles.bottomLabelCell, width: "20%", backgroundColor: theme.soft }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>記入者(作業者)</Text>
             </View>
-            <View style={{ ...styles.bottomValueCell, width: "47%", borderLeftColor: theme.primary }}>
+            <View style={{ ...styles.bottomValueCell, width: "42%", borderLeftColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.workerName}</Text>
             </View>
-            <View style={{ ...styles.bottomLabelCellWide, width: "13%", borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.soft }}>
+            <View style={{ ...styles.bottomLabelCellWide, width: "18%", borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.soft }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>消費税(10%)</Text>
             </View>
             <View style={{ ...styles.bottomValueCellAmount, width: "20%", borderLeftColor: theme.primary, position: "relative" }}>
@@ -646,7 +657,7 @@ function DocumentPage({
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
               </View>
-              <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.subtotal}</Text>
+              <Text style={{ ...styles.emphasisAmountText, color: theme.primary }}>{bottomSummary.subtotal}</Text>
             </View>
           </View>
 
@@ -660,7 +671,7 @@ function DocumentPage({
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
               </View> */}
-              <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.total}</Text>
+              <Text style={{ ...styles.emphasisAmountText, color: theme.primary }}>{bottomSummary.total}</Text>
             </View>
           </View>
         </View>
