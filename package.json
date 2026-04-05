@@ -11,6 +11,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:seed": "node prisma/seed.mjs",
+    "prisma:reset:admin-only": "node prisma/reset-admin-only.mjs",
     "prisma:seed:reports": "node prisma/seed-reports.mjs",
     "prisma:studio": "prisma studio"
   },
