@@ -618,7 +618,7 @@ function DocumentPage({
               <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.workLocation}</Text>
             </View>
             <View style={{ ...styles.bottomLabelCellWide, width: "18%", borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.primary }}>
-              <Text style={{ ...styles.detailText, color: "#ffffff" }}>担当者(サイン)</Text>
+              <Text style={{ fontSize: 7.0, color: "#ffffff" }}>担当者(サイン)</Text>
             </View>
             <View style={{ ...styles.bottomValueCell, width: "20%", borderLeftColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.signLabel}</Text>
@@ -649,7 +649,7 @@ function DocumentPage({
         <View style={{ ...styles.bottomRight, borderLeftColor: theme.primary }}>
           <View style={{ ...styles.bottomRow, borderTopWidth: 0 }}>
             <View style={{ ...styles.bottomLabelCellWide, width: "35%", backgroundColor: theme.soft }}>
-              <Text style={{ ...styles.detailText, color: theme.primary }}>10%対象小計</Text>
+              <Text style={{ fontSize: 7.5, color: theme.primary }}>10%対象小計</Text>
             </View>
             <View style={{ ...styles.bottomValueCellAmount, width: "65%", borderLeftColor: theme.primary, position: "relative" }}>
               <View style={styles.bottomAmountGuide}>
