@@ -617,8 +617,8 @@ function DocumentPage({
             <View style={{ ...styles.bottomValueCell, width: "42%", borderLeftColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.workLocation}</Text>
             </View>
-            <View style={{ ...styles.bottomLabelCellWide, width: "18%", borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.primary }}>
-              <Text style={{ fontSize: 7.0, color: "#ffffff" }}>担当者(サイン)</Text>
+            <View style={{ ...styles.bottomLabelCellWide, width: "18%", borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.soft }}>
+              <Text style={{ fontSize: 7.0, color: theme.primary }}>担当者(サイン)</Text>
             </View>
             <View style={{ ...styles.bottomValueCell, width: "20%", borderLeftColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.signLabel}</Text>
