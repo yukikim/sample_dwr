@@ -84,6 +84,7 @@ export async function GET(request: Request) {
     endDate: searchParams.get("endDate"),
     clientCode: searchParams.get("clientCode"),
     clientName: searchParams.get("clientName"),
+    purchaser: searchParams.get("purchaser"),
     carType: searchParams.get("carType"),
     workLocation: searchParams.get("workLocation"),
     vehicleIdentifier: searchParams.get("vehicleIdentifier"),

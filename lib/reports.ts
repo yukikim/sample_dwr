@@ -5,6 +5,7 @@ export type ReportListQuery = {
   endDate?: string | null;
   clientCode?: string | null;
   clientName?: string | null;
+  purchaser?: string | null;
   carType?: string | null;
   workLocation?: string | null;
   vehicleIdentifier?: string | null;
@@ -105,6 +106,13 @@ export function buildReportWhere(query: ReportListQuery): Prisma.DailyWorkReport
   if (query.clientName?.trim()) {
     where.clientName = {
       contains: query.clientName.trim(),
+      mode: "insensitive",
+    };
+  }
+
+  if (query.purchaser?.trim()) {
+    where.purchaser = {
+      contains: query.purchaser.trim(),
       mode: "insensitive",
     };
   }

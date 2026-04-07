@@ -20,6 +20,7 @@ type ClientOption = {
 };
 
 type VisibleColumns = {
+  purchaser: boolean;
   carType: boolean;
   workLocation: boolean;
   vehicleIdentifier: boolean;
@@ -41,6 +42,7 @@ type ReportItem = {
   workDate: string;
   clientCode: string;
   clientName: string;
+  purchaser: string | null;
   workMinutes: number;
   laborMinutes: number;
   travelMinutes: number;
@@ -74,6 +76,7 @@ type Filters = {
   endDate: string;
   clientCode: string;
   clientName: string;
+  purchaser: string;
   carType: string;
   workLocation: string;
   vehicleIdentifier: string;
@@ -153,6 +156,7 @@ type VehicleIdentifierOptionsResponse = {
 };
 
 const defaultVisibleColumns: VisibleColumns = {
+  purchaser: true,
   carType: true,
   workLocation: true,
   vehicleIdentifier: true,
@@ -170,6 +174,7 @@ const defaultVisibleColumns: VisibleColumns = {
 };
 
 const toggleableColumns: Array<{ key: keyof VisibleColumns; label: string }> = [
+  { key: "purchaser", label: "購入者" },
   { key: "carType", label: "車種" },
   { key: "workLocation", label: "作業場所" },
   { key: "vehicleIdentifier", label: "登録番号または車体番号" },
@@ -177,12 +182,12 @@ const toggleableColumns: Array<{ key: keyof VisibleColumns; label: string }> = [
   { key: "customerStatus", label: "状態" },
   { key: "billingStatus", label: "請求処理" },
   { key: "salesAmount", label: "売上" },
-  { key: "workMinutes", label: "作業分" },
-  { key: "laborMinutes", label: "工数分" },
-  { key: "travelMinutes", label: "移動分" },
+  // { key: "workMinutes", label: "作業分" },
+  // { key: "laborMinutes", label: "工数分" },
+  // { key: "travelMinutes", label: "移動分" },
   { key: "unitCount", label: "台数" },
-  { key: "standardMinutes", label: "基準分" },
-  { key: "points", label: "ポイント" },
+  // { key: "standardMinutes", label: "基準分" },
+  // { key: "points", label: "ポイント" },
   { key: "remarks", label: "備考" },
 ];
 
@@ -191,6 +196,7 @@ const initialFilters: Filters = {
   endDate: "",
   clientCode: "",
   clientName: "",
+  purchaser: "",
   carType: "",
   workLocation: "",
   vehicleIdentifier: "",
@@ -249,6 +255,7 @@ function parseFilters(searchParams: ReadonlyURLSearchParams): Filters {
     endDate: searchParams.get("endDate") ?? "",
     clientCode: searchParams.get("clientCode") ?? "",
     clientName: searchParams.get("clientName") ?? "",
+    purchaser: searchParams.get("purchaser") ?? "",
     carType: searchParams.get("carType") ?? "",
     workLocation: searchParams.get("workLocation") ?? "",
     vehicleIdentifier: searchParams.get("vehicleIdentifier") ?? "",
@@ -266,6 +273,7 @@ function areFiltersEqual(left: Filters, right: Filters) {
     left.endDate === right.endDate &&
     left.clientCode === right.clientCode &&
     left.clientName === right.clientName &&
+    left.purchaser === right.purchaser &&
     left.carType === right.carType &&
     left.workLocation === right.workLocation &&
     left.vehicleIdentifier === right.vehicleIdentifier &&
@@ -980,6 +988,17 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
             </label>
 
             <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
+              購入者
+              <input
+                type="text"
+                value={draftFilters.purchaser}
+                onChange={(event) => handleFilterChange("purchaser", event.target.value)}
+                className="h-11 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
+                placeholder="購入者で絞り込む"
+              />
+            </label>
+
+            <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
               車種
               <select
                 value={draftFilters.carType}
@@ -1200,6 +1219,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                   </th>
                   <th className="px-4 py-2 whitespace-nowrap">日付</th>
                   <th className="px-4 py-2 whitespace-nowrap">得意先</th>
+                  {visibleColumns.purchaser ? <th className="px-4 py-2 whitespace-nowrap">購入者</th> : null}
                   {visibleColumns.carType ? <th className="px-4 py-2 whitespace-nowrap">車種</th> : null}
                   {visibleColumns.workLocation ? <th className="px-4 py-2 whitespace-nowrap">作業場所</th> : null}
                   {visibleColumns.vehicleIdentifier ? <th className="px-4 py-2 whitespace-nowrap">登録番号または車体番号</th> : null}
@@ -1241,6 +1261,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                         <div className="font-medium">{item.clientName}</div>
                         <div className="text-(--ink-muted)">{item.clientCode}</div>
                       </td>
+                      {visibleColumns.purchaser ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.purchaser ?? "-"}</td> : null}
                       {visibleColumns.carType ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.carType ?? "-"}</td> : null}
                       {visibleColumns.workLocation ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.workLocation ?? "-"}</td> : null}
                       {visibleColumns.vehicleIdentifier ? <td className="px-4 py-4 text-sm whitespace-nowrap">{item.vehicleIdentifier ?? "-"}</td> : null}
