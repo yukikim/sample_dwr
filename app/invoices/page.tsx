@@ -64,6 +64,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
   const hasSelection = selection.items.length > 0;
   const hasSingleClient = hasSingleInvoiceClient(selection);
   const downloadDisabled = !hasSelection || !hasSingleClient;
+  const dateOfExecution = typeof selection.summary.startDate === "string" ? new Date(selection.summary.startDate) : (selection.summary.startDate ?? new Date()); // 選択された日報のうち最も古い日付を帳票の日付とする
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#f7efe2,#f3e3ce_35%,#efe6db_70%,#f8f4ef_100%)] px-6 py-8 text-(--ink) sm:px-10">
@@ -219,9 +220,9 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
 
                     <div className="mt-2 flex items-end gap-4" style={{ color: previewTheme(documentType).primary }}>
                       {[
-                        { label: "年", value: new Date().getFullYear() },
-                        { label: "月", value: new Date().getMonth() + 1 },
-                        { label: "日", value: new Date().getDate() },
+                        { label: "年", value: dateOfExecution.getFullYear() },
+                        { label: "月", value: dateOfExecution.getMonth() + 1 },
+                        { label: "日", value: dateOfExecution.getDate() },
                       ].map((part, index) => (
                         <div key={`${documentType}-${part.label}-${index}`} className="w-auto mr-2 text-center text-base flex flex-row items-center">
                           <div className="text-xl font-medium" style={{ borderColor: previewTheme(documentType).primary }}>{part.value}</div>

@@ -423,13 +423,14 @@ function buildPages(selection: InvoiceSelectionData, documentTypes: InvoiceDocum
   return pages;
 }
 
-function buildIssueDateParts() {
-  const now = new Date();
+function buildIssueDateParts(value: string | null) {
+  const date = value ? new Date(`${value}T00:00:00`) : new Date();
+  const normalizedDate = Number.isNaN(date.getTime()) ? new Date() : date;
 
   return {
-    year: String(now.getFullYear()),
-    month: String(now.getMonth() + 1),
-    day: String(now.getDate()),
+    year: String(normalizedDate.getFullYear()),
+    month: String(normalizedDate.getMonth() + 1),
+    day: String(normalizedDate.getDate()),
   };
 }
 
@@ -489,14 +490,16 @@ function joinUniqueValues(values: Array<string | null>) {
 function DocumentPage({
   administrator,
   pageData,
+  issueDateSource,
   selectionPeriod,
 }: {
   administrator: PdfAdministrator;
   pageData: PdfPageData;
+  issueDateSource: string | null;
   selectionPeriod: string;
 }) {
   const theme = getDocumentTheme(pageData.documentType);
-  const issueDate = buildIssueDateParts();
+  const issueDate = buildIssueDateParts(issueDateSource);
   const detailItems = buildLineItems(pageData.documentType, pageData.group, pageData.rows);
   const filledItems = [...detailItems, ...buildPlaceholderLineItems(Math.max(0, DETAIL_ROW_COUNT - detailItems.length))];
   const bottomSummary = buildBottomSummaryRows(pageData.group, administrator);
@@ -695,6 +698,7 @@ function InvoicePdfDocument({
   selection: InvoiceSelectionData;
 }) {
   const pages = buildPages(selection, documentTypes);
+  const issueDateSource = selection.summary.startDate;
   const selectionPeriod = formatInvoicePeriod(selection.summary);
 
   return (
@@ -704,6 +708,7 @@ function InvoicePdfDocument({
           key={`${pageData.documentType}-${pageData.group.clientCode}-${pageIndex}`}
           administrator={administrator}
           pageData={pageData}
+          issueDateSource={issueDateSource}
           selectionPeriod={selectionPeriod}
         />
       ))}
