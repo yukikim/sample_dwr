@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import MainHeader from "./components/MainHeader";
+import { Analytics } from "@vercel/analytics/next"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,6 +36,7 @@ export default function RootLayout({
         <footer className="bg-main-300 p-4 text-center text-sm text-slate-100">
           © 2024 Polish-DWR. All rights reserved.
         </footer>
+        <Analytics />
         </body>
     </html>
   );
