@@ -1116,6 +1116,9 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
         </section>
 
         <section className="rounded-4xl border border-white/60 bg-white/88 p-6 shadow-[0_20px_60px_rgba(76,47,33,0.10)]">
+        月毎の請求書を出力する「プルダウン選択フォーム」と「出力ページへのリンクボタン」をここに追加
+        </section>
+        <section className="rounded-4xl border border-white/60 bg-white/88 p-6 shadow-[0_20px_60px_rgba(76,47,33,0.10)]">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold">検索結果</h2>
