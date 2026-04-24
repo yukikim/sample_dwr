@@ -39,25 +39,14 @@ type DocumentTheme = {
   intro: string;
 };
 
-type InvoicePdfFontSource = {
+export type InvoicePdfFontSource = {
   src: string;
   postscriptName?: string;
 };
 
-type InvoicePdfFontSources = {
+export type InvoicePdfFontSources = {
   regular: InvoicePdfFontSource;
   bold: InvoicePdfFontSource;
-};
-
-const DEFAULT_FONT_SOURCES: InvoicePdfFontSources = {
-  regular: {
-    src: "/api/pdf/fonts/400",
-    postscriptName: "SourceHanCodeJP-Regular",
-  },
-  bold: {
-    src: "/api/pdf/fonts/700",
-    postscriptName: "SourceHanCodeJP-Bold",
-  },
 };
 
 const currencyFormatter = new Intl.NumberFormat("ja-JP", {
@@ -339,7 +328,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export function ensureInvoicePdfFontsRegistered(fontSources: InvoicePdfFontSources = DEFAULT_FONT_SOURCES) {
+export function ensureInvoicePdfFontsRegistered(fontSources: InvoicePdfFontSources) {
   if (fontRegistered) {
     return;
   }
@@ -639,10 +628,10 @@ function DocumentPage({
             <View style={{ ...styles.bottomValueCell, width: "42%", borderLeftColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.workLocation}</Text>
             </View>
-            <View style={{ ...styles.bottomLabelCellWide, width: "18%", borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.soft }}>
-              <Text style={{ fontSize: 7.0, color: theme.primary }}>担当者(サイン)</Text>
+            <View style={{ ...styles.bottomLabelCellWide, width: "17%", borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.soft }}>
+              <Text style={{ fontSize: 8.0, color: theme.primary }}>担当者</Text>
             </View>
-            <View style={{ ...styles.bottomValueCell, width: "20%", borderLeftColor: theme.primary }}>
+            <View style={{ ...styles.bottomValueCell, width: "21%", borderLeftColor: theme.primary }}>
               <Text style={{ ...styles.emphasisAmountText, color: theme.primary }}> {/*bottomSummary.signLabel*/}</Text>
             </View>
           </View>
@@ -654,10 +643,10 @@ function DocumentPage({
             <View style={{ ...styles.bottomValueCell, width: "42%", borderLeftColor: theme.primary }}>
               <Text style={{ ...styles.detailText, color: theme.primary }}>{bottomSummary.workerName}</Text>
             </View>
-            <View style={{ ...styles.bottomLabelCellWide, width: "18%", borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.soft }}>
-              <Text style={{ ...styles.detailText, color: theme.primary }}>消費税(10%)</Text>
+            <View style={{ ...styles.bottomLabelCellWide, width: "17%", borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: theme.primary, backgroundColor: theme.soft }}>
+              <Text style={{ fontSize: 8.0, color: theme.primary }}>消費税(10%)</Text>
             </View>
-            <View style={{ ...styles.bottomValueCellAmount, width: "20%", borderLeftColor: theme.primary, position: "relative" }}>
+            <View style={{ ...styles.bottomValueCellAmount, width: "21%", borderLeftColor: theme.primary, position: "relative" }}>
               <View style={styles.bottomAmountGuide}>
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />
                 <View style={{ ...styles.amountGuideLine, borderLeftColor: theme.primary }} />

@@ -29,6 +29,8 @@
 - PDF 帳票
 	- 実装済み: 日報一覧で選択したデータを対象に、作業伝票、納品書、請求書を個別または一括で PDF ダウンロード
 	- 生成方式: React PDF によるサーバー側生成
+	- プレビュー方式: [app/invoices/page.tsx](app/invoices/page.tsx) から [app/api/invoices/pdf/route.ts](app/api/invoices/pdf/route.ts) を inline 表示する
+	- フォント方針: Source Han Code JP を優先し、無い環境では Hiragino Sans GB、最後に同梱 Noto Sans JP へフォールバックする
 
 ### 0.3 未実装
 
@@ -406,7 +408,17 @@ API は認証前提とし、未認証アクセスには 401 を返す。
 - パスワード: `postgres`
 - ポート: `5433`
 - 認証用シークレット: `AUTH_SECRET`
-- PDF フォントパス: `PDF_FONT_PATH` を指定すると PDF 出力時の埋め込みフォントを上書き可能
+- 認証用シークレット: `AUTH_SECRET`
+- PDF フォント上書き: `PDF_FONT_PATH` を指定すると PDF 出力時の通常ウェイトフォントを上書き可能
+- PDF 太字フォント上書き: `PDF_FONT_BOLD_PATH` を指定すると PDF 出力時の太字フォントを上書き可能
+- PDF TTC face 上書き: `PDF_FONT_POSTSCRIPT_NAME` と `PDF_FONT_BOLD_POSTSCRIPT_NAME` を指定すると TTC / OTC の face 名を明示できる
+
+PDF フォント解決順:
+
+1. `PDF_FONT_PATH` と関連環境変数
+2. macOS の Source Han Code JP
+3. macOS の Hiragino Sans GB
+4. プロジェクト同梱の Noto Sans JP
 
 ### 5.4 インフラ方針
 
