@@ -1,36 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { buildInvoicePdfUrl, invoiceDocumentTypes, getInvoiceDocumentLabel, type InvoiceDocumentType } from "@/lib/invoice-documents";
+import { InvoicePdfBrowserSection } from "@/app/invoices/invoice-pdf-browser-section";
+import { InvoicePdfDownloadLink } from "@/app/invoices/invoice-pdf-download-link";
 import { getCurrentAdministrator } from "@/lib/auth";
-import { formatInvoicePeriod, getInvoiceSelectionData, hasSingleInvoiceClient, invoiceIssuer } from "@/lib/invoices";
+import { formatInvoicePeriod } from "@/lib/invoice-shared";
+import { getInvoiceSelectionData, hasSingleInvoiceClient } from "@/lib/invoices";
 import { parseInvoiceSelectionIdsFromPage } from "@/lib/invoice-documents";
 
 type InvoicePageSearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-function previewTheme(documentType: InvoiceDocumentType) {
-  if (documentType === "work-slip") {
-    return {
-      primary: "#000000",
-      soft: "#cdcfce",
-      intro: "下記の通り受注致しました",
-    };
-  }
-
-  if (documentType === "delivery-note") {
-    return {
-      primary: "#1468b3",
-      soft: "#dbe6f4",
-      intro: "下記の通り納品申し上げます",
-    };
-  }
-
-  return {
-    primary: "#ef3340",
-    soft: "#f8ddd4",
-    intro: "下記の通り御請求申し上げます",
-  };
-}
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("ja-JP", {
@@ -38,18 +16,6 @@ function formatCurrency(value: number) {
     currency: "JPY",
     maximumFractionDigits: 0,
   }).format(value);
-}
-
-function previewDocumentDescription(documentType: InvoiceDocumentType) {
-  if (documentType === "work-slip") {
-    return "受注向けの作業伝票レイアウトで、車種・作業内容・金額を罫線帳票として出力します。";
-  }
-
-  if (documentType === "delivery-note") {
-    return "納品書向けの配色と文言に切り替え、同じ骨格のまま納品帳票として出力します。";
-  }
-
-  return "請求書向けの配色と金額欄を中心に、請求帳票として見える構成で出力します。";
 }
 
 export default async function InvoicesPage({ searchParams }: { searchParams: InvoicePageSearchParams }) {
@@ -64,7 +30,6 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
   const hasSelection = selection.items.length > 0;
   const hasSingleClient = hasSingleInvoiceClient(selection);
   const downloadDisabled = !hasSelection || !hasSingleClient;
-  const dateOfExecution = typeof selection.summary.startDate === "string" ? new Date(selection.summary.startDate) : (selection.summary.startDate ?? new Date()); // 選択された日報のうち最も古い日付を帳票の日付とする
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#f7efe2,#f3e3ce_35%,#efe6db_70%,#f8f4ef_100%)] px-6 py-8 text-(--ink) sm:px-10">
@@ -86,16 +51,16 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
               日報一覧へ戻る
             </Link>
             {hasSelection ? (
-              <a
-                href={downloadDisabled ? undefined : buildInvoicePdfUrl(selection.items.map((item) => item.id), "all")}
-                aria-disabled={downloadDisabled}
+              <InvoicePdfDownloadLink
                 className={`inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold transition ${downloadDisabled
-                    ? "pointer-events-none border border-black/10 bg-white text-(--ink-muted) opacity-50"
-                    : "bg-(--accent-strong) text-white hover:bg-(--accent-deep)"
-                  }`}
-              >
-                3点まとめてダウンロード
-              </a>
+                  ? "pointer-events-none border border-black/10 bg-white text-(--ink-muted) opacity-50"
+                  : "bg-(--accent-strong) text-white hover:bg-(--accent-deep)"
+                }`}
+                disabled={downloadDisabled}
+                documentTypes={["work-slip", "delivery-note", "invoice"]}
+                label="3点まとめてダウンロード"
+                selectedIds={selection.items.map((item) => item.id)}
+              />
             ) : null}
           </div>
         </header>
@@ -179,131 +144,10 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Inv
               </div>
             </section>
 
-            <section className="grid gap-6">
-              {invoiceDocumentTypes.map((documentType) => (
-                <article key={documentType} className="rounded-4xl border border-white/60 bg-white/88 p-6 shadow-[0_20px_60px_rgba(76,47,33,0.10)]">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--ink-muted)">PDF Preview</p>
-                      <h2 className="mt-2 text-2xl font-semibold">{getInvoiceDocumentLabel(documentType)}</h2>
-                      <p className="mt-2 text-sm text-(--ink-soft)">{previewDocumentDescription(documentType)}</p>
-                    </div>
-                    <a
-                      href={downloadDisabled ? undefined : buildInvoicePdfUrl(selection.items.map((item) => item.id), [documentType])}
-                      aria-disabled={downloadDisabled}
-                      className={`inline-flex h-11 shrink-0 items-center justify-center rounded-full border px-5 text-sm font-medium transition ${downloadDisabled
-                          ? "pointer-events-none border-black/10 bg-white text-(--ink-muted) opacity-50"
-                          : "border-black/10 bg-white text-(--ink) hover:border-black/20 hover:bg-black/3"
-                        }`}
-                    >
-                      ダウンロード
-                    </a>
-                  </div>
-
-                  <div className="mt-6 rounded-3xl border border-[#eadfd5] bg-white p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
-                    <div className="mx-auto w-fit border-b pb-1 text-center" style={{ color: previewTheme(documentType).primary, borderColor: previewTheme(documentType).primary }}>
-                      <h3 className="pl-[0.45em] text-2xl font-semibold tracking-[0.45em]">{getInvoiceDocumentLabel(documentType)}</h3>
-                    </div>
-
-                    <div className="mt-5 flex items-start justify-between gap-6">
-                      <div className="min-w-0 flex-1 pt-7">
-                        <div className="border-b pb-2 text-left" style={{ color: previewTheme(documentType).primary, borderColor: previewTheme(documentType).primary }}>
-                          <p className="text-2xl font-semibold">{selection.groups[0]?.clientName ?? "得意先"} 様</p>
-                        </div>
-                      </div>
-                      <div className="w-[34%] text-left" style={{ color: previewTheme(documentType).primary }}>
-                        <p className="text-2xl font-semibold">{invoiceIssuer.companyName}</p>
-                        <p className="mt-1 text-sm">{invoiceIssuer.address}</p>
-                        {/* <p className="mt-1 text-xs">振込先 {invoiceIssuer.transferAccount}</p> */}
-                      </div>
-                    </div>
-
-                    <div className="mt-2 flex items-end gap-4" style={{ color: previewTheme(documentType).primary }}>
-                      {[
-                        { label: "年", value: dateOfExecution.getFullYear() },
-                        { label: "月", value: dateOfExecution.getMonth() + 1 },
-                        { label: "日", value: dateOfExecution.getDate() },
-                      ].map((part, index) => (
-                        <div key={`${documentType}-${part.label}-${index}`} className="w-auto mr-2 text-center text-base flex flex-row items-center">
-                          <div className="text-xl font-medium" style={{ borderColor: previewTheme(documentType).primary }}>{part.value}</div>
-                          <p>{part.label}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-3 flex items-center gap-2 text-base" style={{ color: previewTheme(documentType).primary }}>
-                      <div className="flex items-center h-10 w-60 border" style={{ borderColor: previewTheme(documentType).primary }}>
-                        <div className="flex w-32.5 items-center px-2">得意先コード</div>
-                      <div>{selection.groups[0].clientCode}</div>
-                      </div>
-                      <p>{previewTheme(documentType).intro}</p>
-                    </div>
-
-                    <div className="mt-3 overflow-hidden border" style={{ borderColor: previewTheme(documentType).primary }}>
-                      <div className="grid min-h-8 grid-cols-[12%_12%_18%_23%_12%_23%] text-center text-base font-semibold text-white" style={{ backgroundColor: previewTheme(documentType).primary }}>
-                        <div className="flex items-center justify-center border-r border-white/80">車種</div>
-                        <div className="flex items-center justify-center border-r border-white/80">登録番号又は車体番号</div>
-                        <div className="flex items-center justify-center border-r border-white/80">客名</div>
-                        <div className="flex items-center justify-center border-r border-white/80">作業内容</div>
-                        <div className="flex items-center justify-center border-r border-white/80">金額</div>
-                        <div className="flex items-center justify-center">摘要</div>
-                      </div>
-
-                      {Array.from({ length: 20 }).map((_, rowIndex) => {
-                        const item = selection.groups[0]?.items[rowIndex];
-
-                        return (
-                          <div
-                            key={`${documentType}-row-${rowIndex}`}
-                            className="grid h-8 min-h-8 overflow-hidden grid-cols-[12%_12%_18%_23%_12%_23%] text-base"
-                            style={{
-                              color: previewTheme(documentType).primary,
-                              backgroundColor: rowIndex % 2 === 1 ? previewTheme(documentType).soft : "#ffffff",
-                              borderTop: `1px solid ${previewTheme(documentType).primary}`,
-                            }}
-                          >
-                            <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{item?.carType ?? ""}</div>
-                            <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{item?.vehicleIdentifier ?? ""}</div>
-                            <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{item ? (item.purchaser ?? selection.groups[0]?.clientName ?? "") : ""}</div>
-                            <div className="border-r px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{item ? item.workCode : ""}</div>
-                            <div className="border-r px-2 py-2 text-right" style={{ borderColor: previewTheme(documentType).primary }}>{item ? formatCurrency(item.salesAmount) : ""}</div>
-                            <div className="px-2 py-2">{item?.remarks ?? ""}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div className="grid min-h-16 grid-cols-[65.2%_34.8%] border-x border-b text-base" style={{ borderColor: previewTheme(documentType).primary, color: previewTheme(documentType).primary }}>
-                      <div>
-                        <div className="grid grid-cols-[141px_356px_150px_110px] border-b" style={{ borderColor: previewTheme(documentType).primary }}>
-                          <div className="px-2 py-2" style={{ backgroundColor: previewTheme(documentType).soft }}>作業場所</div>
-                          <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{selection.groups[0]?.items.map((item) => item.workLocation).filter(Boolean).filter((value, index, array) => array.indexOf(value) === index).join(" / ") || "-"}</div>
-                          <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary, backgroundColor: previewTheme(documentType).soft }}>担当者(サイン)</div>
-                          <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{selection.groups[0]?.items.map((item) => item.signerName).filter(Boolean).filter((value, index, array) => array.indexOf(value) === index).join(" / ") || "-"}</div>
-                        </div>
-                        <div className="grid grid-cols-[141px_356px_150px_110px]" style={{ borderColor: previewTheme(documentType).primary }}>
-                          <div className="px-2 py-2" style={{ backgroundColor: previewTheme(documentType).soft }}>記入者(作業者)</div>
-                          <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary }}>{administrator.name}</div>
-                          <div className="border-l px-2 py-2" style={{ borderColor: previewTheme(documentType).primary, backgroundColor: previewTheme(documentType).soft }}>消費税(10%)</div>
-                          <div className="border-l px-2 py-2 text-right" style={{ borderColor: previewTheme(documentType).primary }}>{formatCurrency(Math.floor((selection.groups[0]?.totalSalesAmount ?? 0) * 0.1))}</div>
-                        </div>
-                      </div>
-
-                      <div className="border-l" style={{ borderColor: previewTheme(documentType).primary }}>
-                        <div className="grid grid-cols-[140px_260px] border-b" style={{ borderColor: previewTheme(documentType).primary }}>
-                          <div className="px-2 py-2" style={{ backgroundColor: previewTheme(documentType).soft }}>10%対象小計</div>
-                          <div className="border-l px-2 py-2 text-right" style={{ borderColor: previewTheme(documentType).primary }}>{formatCurrency(selection.groups[0]?.totalSalesAmount ?? 0)}</div>
-                        </div>
-                        <div className="grid grid-cols-[140px_260px]" style={{ borderColor: previewTheme(documentType).primary }}>
-                          <div className="px-2 py-2" style={{ backgroundColor: previewTheme(documentType).soft }}>合計金額</div>
-                          <div className="border-l px-2 py-2 text-right font-bold" style={{ borderColor: previewTheme(documentType).primary }}>{formatCurrency((selection.groups[0]?.totalSalesAmount ?? 0) + Math.floor((selection.groups[0]?.totalSalesAmount ?? 0) * 0.1))}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </section>
+            <InvoicePdfBrowserSection
+              downloadDisabled={downloadDisabled}
+              selectedIds={selection.items.map((item) => item.id)}
+            />
           </>
         )}
       </div>

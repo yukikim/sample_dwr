@@ -19,6 +19,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const selectedIds = parseInvoiceSelectionIds(searchParams);
   const documentTypes = parseInvoiceDocumentTypes(searchParams);
+  const disposition = searchParams.get("disposition") === "inline" ? "inline" : "attachment";
 
   if (selectedIds.length === 0) {
     return apiError({ code: "VALIDATION_ERROR", message: "出力対象の日報が選択されていません。" }, { status: 400 });
@@ -50,7 +51,7 @@ export async function GET(request: Request) {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${fileName}"; filename*=UTF-8''${encodedFileName}`,
+      "Content-Disposition": `${disposition}; filename="${fileName}"; filename*=UTF-8''${encodedFileName}`,
       "Cache-Control": "no-store",
     },
   });

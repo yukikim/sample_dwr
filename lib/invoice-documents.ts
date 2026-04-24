@@ -63,7 +63,11 @@ export function buildInvoicePageUrl(selectedIds: string[]) {
   return query ? `/invoices?${query}` : "/invoices";
 }
 
-export function buildInvoicePdfUrl(selectedIds: string[], documentTypes: InvoiceDocumentType[] | "all") {
+export function buildInvoicePdfUrl(
+  selectedIds: string[],
+  documentTypes: InvoiceDocumentType[] | "all",
+  disposition: "attachment" | "inline" = "attachment",
+) {
   const searchParams = new URLSearchParams();
 
   for (const id of selectedIds) {
@@ -76,6 +80,10 @@ export function buildInvoicePdfUrl(selectedIds: string[], documentTypes: Invoice
     for (const documentType of documentTypes) {
       searchParams.append("document", documentType);
     }
+  }
+
+  if (disposition === "inline") {
+    searchParams.append("disposition", "inline");
   }
 
   return `/api/invoices/pdf?${searchParams.toString()}`;
