@@ -1,6 +1,7 @@
 export const invoiceIssuer = {
   companyName: "POLiSH.合同会社",
   address: "〒270-1337 千葉県印西市草深2429-18",
+  phone: "070-5619-6657(代表)",
   transferAccount: "xxxxxx",
   sealLabel: "印",
 } as const;

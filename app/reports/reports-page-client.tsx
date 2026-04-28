@@ -7,6 +7,7 @@ import type { ReadonlyURLSearchParams } from "next/navigation";
 
 import type { AuthenticatedAdministrator } from "@/lib/auth";
 import { buildInvoicePageUrl } from "@/lib/invoice-documents";
+import { buildMonthlyInvoicePageUrl } from "@/lib/monthly-invoice-documents";
 
 type ReportMasterOption = {
   id: string;
@@ -322,10 +323,6 @@ function formatBillingStatus(value: string) {
   return value;
 }
 
-function formatOptionalNumber(value: number | null) {
-  return value === null ? "-" : String(value);
-}
-
 function getMonthRange(value: string) {
   if (!/^\d{4}-\d{2}$/.test(value)) {
     return null;
@@ -383,8 +380,10 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialUrlFilters = parseFilters(searchParams);
+  const initialMonthlyInvoiceMonth = getSelectedMonthValue(initialUrlFilters);
   const [draftFilters, setDraftFilters] = useState<Filters>(initialUrlFilters);
   const [activeFilters, setActiveFilters] = useState<Filters>(initialUrlFilters);
+  const [monthlyInvoiceMonth, setMonthlyInvoiceMonth] = useState(initialMonthlyInvoiceMonth);
   const [items, setItems] = useState<ReportItem[]>([]);
   const [summary, setSummary] = useState<Summary>(emptySummary);
   const [monthOptions, setMonthOptions] = useState<MonthOption[]>([]);
@@ -571,6 +570,8 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
   const selectedCount = selectedReportIds.length;
   const selectedReportIdSet = new Set(selectedReportIds);
   const allVisibleSelected = items.length > 0 && items.every((item) => selectedReportIdSet.has(item.id));
+  const monthlyInvoicePageUrl = buildMonthlyInvoicePageUrl(monthlyInvoiceMonth);
+  const monthlyInvoiceDisabled = !monthlyInvoiceMonth;
   const selectedClientItem = items.find((item) => `${item.clientCode}::${item.clientName}` === selectedClientKey);
 
   async function handleDelete(reportId: string) {
@@ -1116,7 +1117,46 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
         </section>
 
         <section className="rounded-4xl border border-white/60 bg-white/88 p-6 shadow-[0_20px_60px_rgba(76,47,33,0.10)]">
-        月毎の請求書を出力する「プルダウン選択フォーム」と「出力ページへのリンクボタン」をここに追加
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--ink-muted)">Browser PDF</p>
+              <h2 className="mt-2 text-2xl font-semibold">月次請求書</h2>
+              <p className="mt-2 text-sm text-(--ink-soft)">
+                対象月を選ぶと、得意先ごとに集約した月次請求書のプレビュー画面へ進めます。出力ページではブラウザプレビューとPDFダウンロードに対応します。
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-3xl border border-[#c68b59] bg-[#fff9f2] p-5 shadow-[0_16px_40px_rgba(76,47,33,0.08)]">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+              <label className="flex flex-col gap-2 text-sm text-(--ink-soft)">
+                対象月
+                <select
+                  value={monthlyInvoiceMonth}
+                  onChange={(event) => setMonthlyInvoiceMonth(event.target.value)}
+                  className="h-11 rounded-2xl border border-black/10 bg-white px-4 outline-none transition focus:border-(--accent-strong)"
+                >
+                  <option value="">月を選択</option>
+                  {monthOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <Link
+                href={monthlyInvoicePageUrl}
+                aria-disabled={monthlyInvoiceDisabled}
+                className={`inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold transition ${monthlyInvoiceDisabled
+                  ? "pointer-events-none border border-black/10 bg-white text-(--ink-muted) opacity-50"
+                  : "bg-(--accent-strong) text-white hover:bg-(--accent-deep)"
+                }`}
+              >
+                出力ページを表示
+              </Link>
+            </div>
+          </div>
         </section>
         <section className="rounded-4xl border border-white/60 bg-white/88 p-6 shadow-[0_20px_60px_rgba(76,47,33,0.10)]">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
