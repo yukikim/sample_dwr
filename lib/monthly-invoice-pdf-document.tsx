@@ -383,7 +383,7 @@ function MonthlyInvoicePage({
 
                 <View style={styles.issuerBlock}>
                     <View style={styles.issuerTitleWrap}>
-                        <Image alt="" src={POLISH_STAMP_IMAGE_PATH} style={styles.stampImage} />
+                        <Image src={POLISH_STAMP_IMAGE_PATH} style={styles.stampImage} />
                         <Text style={styles.issuerTitle}>{issuerCompanyName}</Text>
                     </View>
                     <Text style={styles.issuerLine}>{issuerAddress}</Text>
