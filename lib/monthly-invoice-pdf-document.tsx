@@ -1,6 +1,9 @@
+import path from "node:path";
+
 import {
     Document,
     Font,
+    Image,
     Page,
     StyleSheet,
     Text,
@@ -21,6 +24,9 @@ const currencyFormatter = new Intl.NumberFormat("ja-JP", {
     currency: "JPY",
     maximumFractionDigits: 0,
 });
+
+const POLISH_STAMP_IMAGE_PATH = path.join(process.cwd(), "public", "polish-stamp.png");
+const STAMP_WIDTH = 59.6;
 
 const ROWS_PER_PAGE = 30;
 
@@ -62,6 +68,15 @@ const styles = StyleSheet.create({
     issuerBlock: {
         width: "37%",
         alignItems: "flex-end",
+        position: "relative",
+        paddingRight: 10,
+    },
+    issuerTitleWrap: {
+        position: "relative",
+        width: "100%",
+        minHeight: 50,
+        alignItems: "flex-end",
+        justifyContent: "flex-start",
     },
     blockLabel: {
         fontSize: 9,
@@ -76,7 +91,18 @@ const styles = StyleSheet.create({
     issuerTitle: {
         fontSize: 12,
         fontWeight: 500,
-        marginBottom: 10,
+        marginBottom: 6,
+        paddingRight: 60,
+        position: "relative",
+        zIndex: 1,
+    },
+    stampImage: {
+        position: "absolute",
+        top: -14,
+        right: 0,
+        width: STAMP_WIDTH,
+        height: STAMP_WIDTH,
+        opacity: 0.92,
     },
     issuerLine: {
         fontSize: 9,
@@ -356,7 +382,10 @@ function MonthlyInvoicePage({
                 </View>
 
                 <View style={styles.issuerBlock}>
-                    <Text style={styles.issuerTitle}>{issuerCompanyName}</Text>
+                    <View style={styles.issuerTitleWrap}>
+                        <Image alt="" src={POLISH_STAMP_IMAGE_PATH} style={styles.stampImage} />
+                        <Text style={styles.issuerTitle}>{issuerCompanyName}</Text>
+                    </View>
                     <Text style={styles.issuerLine}>{issuerAddress}</Text>
                     <Text style={styles.issuerLine}>TEL {issuerPhone}</Text>
                 </View>

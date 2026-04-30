@@ -26,7 +26,7 @@ export default async function MonthlyInvoicesPage({ searchParams }: { searchPara
   const month = parseMonthlyInvoiceMonthFromPage(await searchParams);
   const data = month ? await getMonthlyInvoiceData(month) : null;
   const hasData = Boolean(data && data.groups.length > 0);
-  console.log("MonthlyInvoicesPage: month =", month, "data =", data);
+  // console.log("MonthlyInvoicesPage: month =", month, "data =", data);
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#f7efe2,#f3e3ce_35%,#efe6db_70%,#f8f4ef_100%)] px-6 py-8 text-(--ink) sm:px-10">
