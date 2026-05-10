@@ -367,6 +367,7 @@ function MonthlyInvoicePage({
     const issuerCompanyName = sanitizePdfText(invoiceIssuer.companyName);
     const issuerAddress = sanitizePdfText(invoiceIssuer.address);
     const issuerPhone = sanitizePdfText(invoiceIssuer.phone);
+    const invoiceRegistrationNumber = sanitizePdfText(invoiceIssuer.invoiceRegistrationNumber);
     const recipientName = sanitizePdfText(group.clientName);
     const issueDate = formatIssueDate(month);
 
@@ -388,6 +389,7 @@ function MonthlyInvoicePage({
                     </View>
                     <Text style={styles.issuerLine}>{issuerAddress}</Text>
                     <Text style={styles.issuerLine}>TEL {issuerPhone}</Text>
+                    <Text style={styles.issuerLine}>登録番号 {invoiceRegistrationNumber}</Text>
                 </View>
             </View>
 

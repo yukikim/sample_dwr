@@ -4,6 +4,7 @@ export const invoiceIssuer = {
   phone: "070-5619-6657(代表)",
   transferAccount: "xxxxxx",
   sealLabel: "印",
+  invoiceRegistrationNumber: "T1040003029692"
 } as const;
 
 export type InvoiceReportItem = {
