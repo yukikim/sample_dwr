@@ -7,7 +7,7 @@ import type { ReadonlyURLSearchParams } from "next/navigation";
 
 import type { AuthenticatedAdministrator } from "@/lib/auth";
 import { buildInvoicePageUrl } from "@/lib/invoice-documents";
-import { buildMonthlyInvoicePageUrl } from "@/lib/monthly-invoice-documents";
+import { buildMonthlyInvoicePageUrl, formatMonthlyInvoiceMonthLabel } from "@/lib/monthly-invoice-documents";
 
 type ReportMasterOption = {
   id: string;
@@ -105,6 +105,16 @@ type ReportsResponse = {
 
 type SummaryResponse = {
   data: Summary;
+  error: {
+    code: string;
+    message: string;
+  } | null;
+};
+
+type BillingStatusUpdateResponse = {
+  data: {
+    updatedCount: number;
+  } | null;
   error: {
     code: string;
     message: string;
@@ -399,9 +409,10 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isFetching, startFetching] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [billingUpdatingId, setBillingUpdatingId] = useState<string | null>(null);
+  const [billingUpdatingIds, setBillingUpdatingIds] = useState<string[]>([]);
   const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
-  const [selectedClientKey, setSelectedClientKey] = useState<string | null>(null);
+  const [isMonthlyInvoiceDialogOpen, setIsMonthlyInvoiceDialogOpen] = useState(false);
+  const [isMonthlyInvoiceActionPending, setIsMonthlyInvoiceActionPending] = useState(false);
 
   const status = searchParams.get("status");
 
@@ -569,10 +580,12 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
   const totalPages = Math.max(1, Math.ceil(total / activeFilters.pageSize));
   const selectedCount = selectedReportIds.length;
   const selectedReportIdSet = new Set(selectedReportIds);
+  const billingUpdatingIdSet = new Set(billingUpdatingIds);
+  const isBillingUpdatePending = billingUpdatingIds.length > 0;
   const allVisibleSelected = items.length > 0 && items.every((item) => selectedReportIdSet.has(item.id));
   const monthlyInvoicePageUrl = buildMonthlyInvoicePageUrl(monthlyInvoiceMonth);
-  const monthlyInvoiceDisabled = !monthlyInvoiceMonth;
-  const selectedClientItem = items.find((item) => `${item.clientCode}::${item.clientName}` === selectedClientKey);
+  const monthlyInvoiceDisabled = !monthlyInvoiceMonth || isMonthlyInvoiceActionPending;
+  const monthlyInvoiceMonthLabel = monthlyInvoiceMonth ? formatMonthlyInvoiceMonthLabel(monthlyInvoiceMonth) : "";
 
   async function handleDelete(reportId: string) {
     const shouldDelete = window.confirm("この日報を削除します。元に戻せません。");
@@ -602,131 +615,143 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
       }
 
       setSuccessMessage("日報を削除しました。");
-      setSelectedReportIds((current) => {
-        const nextIds = current.filter((id) => id !== reportId);
-
-        if (nextIds.length === 0) {
-          setSelectedClientKey(null);
-        }
-
-        return nextIds;
-      });
+      setSelectedReportIds((current) => current.filter((id) => id !== reportId));
       setActiveFilters((current) => ({ ...current }));
     } finally {
       setDeletingId(null);
     }
   }
 
-  async function handleToggleBillingStatus(item: ReportItem) {
-    const nextBillingStatus = item.billingStatus === "processed" ? "unprocessed" : "processed";
+  async function updateBillingStatuses(target: { reportIds: string[] } | { month: string }, billingStatus: "processed" | "unprocessed") {
+    if ("reportIds" in target) {
+      setBillingUpdatingIds(target.reportIds);
+    }
 
-    setBillingUpdatingId(item.id);
     setErrorMessage(null);
+    setSuccessMessage(null);
 
     try {
-      const response = await fetch(`/api/reports/${item.id}`, {
+      const response = await fetch("/api/reports/billing-status", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ billingStatus: nextBillingStatus }),
+        body: JSON.stringify({ ...target, billingStatus }),
       });
-      const json = (await response.json()) as { error: { message: string } | null };
+      const json = (await response.json()) as BillingStatusUpdateResponse;
 
       if (response.status === 401) {
         router.push("/");
-        return;
+        return false;
       }
 
       if (!response.ok) {
         setErrorMessage(json.error?.message ?? "請求処理の更新に失敗しました。");
-        return;
+        return false;
       }
 
-      setItems((current) => current.map((currentItem) => (
-        currentItem.id === item.id
-          ? {
-              ...currentItem,
-              billingStatus: nextBillingStatus,
-            }
-          : currentItem
-      )));
-      setSuccessMessage("請求処理を更新しました。");
+      setActiveFilters((current) => ({ ...current }));
+      return true;
     } finally {
-      setBillingUpdatingId(null);
+      setBillingUpdatingIds([]);
     }
   }
 
-  function handleToggleReportSelection(reportId: string, clientKey: string) {
-    setSelectedReportIds((current) => {
-      if (current.includes(reportId)) {
-        const nextIds = current.filter((id) => id !== reportId);
+  async function handleToggleBillingStatus(item: ReportItem) {
+    const nextBillingStatus = item.billingStatus === "processed" ? "unprocessed" : "processed";
 
-        if (nextIds.length === 0) {
-          setSelectedClientKey(null);
+    const updated = await updateBillingStatuses({ reportIds: [item.id] }, nextBillingStatus);
+
+    if (updated) {
+      setSuccessMessage("請求処理を更新しました。");
+    }
+  }
+
+  async function handleMarkSelectedAsProcessed() {
+    if (selectedCount === 0) {
+      return;
+    }
+
+    const shouldUpdate = window.confirm(`選択中の ${selectedCount} 件の請求処理を「済」に変更します。`);
+
+    if (!shouldUpdate) {
+      return;
+    }
+
+    const updated = await updateBillingStatuses({ reportIds: selectedReportIds }, "processed");
+
+    if (updated) {
+      clearSelections();
+      setSuccessMessage("選択した日報の請求処理を済に更新しました。");
+    }
+  }
+
+  function handleOpenMonthlyInvoiceDialog() {
+    if (monthlyInvoiceDisabled) {
+      return;
+    }
+
+    setErrorMessage(null);
+    setIsMonthlyInvoiceDialogOpen(true);
+  }
+
+  function closeMonthlyInvoiceDialog() {
+    if (isMonthlyInvoiceActionPending) {
+      return;
+    }
+
+    setIsMonthlyInvoiceDialogOpen(false);
+  }
+
+  async function handleMoveToMonthlyInvoicePage(shouldMarkAsProcessed: boolean) {
+    if (!monthlyInvoiceMonth || isMonthlyInvoiceActionPending) {
+      return;
+    }
+
+    setIsMonthlyInvoiceActionPending(true);
+
+    try {
+      if (shouldMarkAsProcessed) {
+        const updated = await updateBillingStatuses({ month: monthlyInvoiceMonth }, "processed");
+
+        if (!updated) {
+          return;
         }
-
-        return nextIds;
       }
 
-      if (selectedClientKey && selectedClientKey !== clientKey) {
-        setErrorMessage("伝票作成では同一得意先の日報のみ選択できます。別の得意先を選ぶ前に現在の選択を解除してください。");
-        return current;
+      setIsMonthlyInvoiceDialogOpen(false);
+      router.push(monthlyInvoicePageUrl);
+    } finally {
+      setIsMonthlyInvoiceActionPending(false);
+    }
+  }
+
+  function handleToggleReportSelection(reportId: string) {
+    setSelectedReportIds((current) => {
+      if (current.includes(reportId)) {
+        return current.filter((id) => id !== reportId);
       }
 
       setErrorMessage(null);
-      setSelectedClientKey(clientKey);
       return [...current, reportId];
     });
   }
 
   function handleToggleVisibleSelections() {
     const visibleIds = items.map((item) => item.id);
-    const visibleClientKeys = Array.from(new Set(items.map((item) => `${item.clientCode}::${item.clientName}`)));
 
     setSelectedReportIds((current) => {
       if (visibleIds.every((id) => current.includes(id))) {
-        const nextIds = current.filter((id) => !visibleIds.includes(id));
-
-        if (nextIds.length === 0) {
-          setSelectedClientKey(null);
-        }
-
-        return nextIds;
+        return current.filter((id) => !visibleIds.includes(id));
       }
 
-      if (!selectedClientKey && visibleClientKeys.length > 1) {
-        setErrorMessage("表示中に複数の得意先が含まれるため、一括選択できません。伝票作成は同一得意先のみ選択可能です。");
-        return current;
-      }
-
-      const allowedClientKey = selectedClientKey ?? visibleClientKeys[0] ?? null;
-      const matchedVisibleIds = items
-        .filter((item) => `${item.clientCode}::${item.clientName}` === allowedClientKey)
-        .map((item) => item.id);
-
-      if (matchedVisibleIds.length === 0) {
-        setErrorMessage("現在の選択と同じ得意先の日報が表示されていません。");
-        return current;
-      }
-
-      if (matchedVisibleIds.length !== items.length) {
-        setErrorMessage("伝票作成では同一得意先の日報のみ選択できます。同じ得意先の行だけを追加しました。");
-      } else {
-        setErrorMessage(null);
-      }
-
-      if (!selectedClientKey && allowedClientKey) {
-        setSelectedClientKey(allowedClientKey);
-      }
-
-      return Array.from(new Set([...current, ...matchedVisibleIds]));
+      setErrorMessage(null);
+      return Array.from(new Set([...current, ...visibleIds]));
     });
   }
 
   function clearSelections() {
     setSelectedReportIds([]);
-    setSelectedClientKey(null);
     setErrorMessage(null);
   }
 
@@ -1145,8 +1170,9 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                 </select>
               </label>
 
-              <Link
-                href={monthlyInvoicePageUrl}
+              <button
+                type="button"
+                onClick={handleOpenMonthlyInvoiceDialog}
                 aria-disabled={monthlyInvoiceDisabled}
                 className={`inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold transition ${monthlyInvoiceDisabled
                   ? "pointer-events-none border border-black/10 bg-white text-(--ink-muted) opacity-50"
@@ -1154,7 +1180,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                 }`}
               >
                 出力ページを表示
-              </Link>
+              </button>
             </div>
           </div>
         </section>
@@ -1179,6 +1205,14 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
               >
                 選択した日報で伝票作成
               </Link>
+              <button
+                type="button"
+                onClick={() => void handleMarkSelectedAsProcessed()}
+                disabled={selectedCount === 0 || isBillingUpdatePending}
+                className="inline-flex h-11 items-center justify-center rounded-full border border-black/10 bg-white px-5 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3 disabled:opacity-50"
+              >
+                {isBillingUpdatePending ? "更新中..." : "選択した請求処理を済にする"}
+              </button>
               <button
                 type="button"
                 onClick={handleExportCsv}
@@ -1213,13 +1247,8 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
             <div>
               <p className="text-sm font-medium text-(--ink)">選択中の日報 {selectedCount} 件</p>
               <p className="mt-1 text-sm text-(--ink-soft)">
-                複数ページにまたがって選択できます。伝票作成は同一得意先のみ選択可能です。
+                複数ページにまたがって選択できます。選択した日報は請求処理の一括更新や伝票作成に使えます。
               </p>
-              {selectedClientKey && selectedClientItem ? (
-                <p className="mt-1 text-xs text-(--ink-muted)">
-                  選択中の得意先: {selectedClientItem.clientName} / {selectedClientItem.clientCode}
-                </p>
-              ) : null}
             </div>
             <div className="flex flex-wrap gap-3">
               <button
@@ -1294,7 +1323,7 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                         <input
                           type="checkbox"
                           checked={selectedReportIdSet.has(item.id)}
-                          onChange={() => handleToggleReportSelection(item.id, `${item.clientCode}::${item.clientName}`)}
+                          onChange={() => handleToggleReportSelection(item.id)}
                           aria-label={`${item.clientName} を選択`}
                           className="h-4 w-4 rounded border border-black/20 accent-(--accent-strong)"
                         />
@@ -1316,10 +1345,10 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
                             type="checkbox"
                             checked={item.billingStatus === "processed"}
                             onChange={() => void handleToggleBillingStatus(item)}
-                            disabled={billingUpdatingId === item.id}
+                            disabled={isBillingUpdatePending}
                             className="h-4 w-4 rounded border border-black/20 accent-(--accent-strong)"
                           />
-                          <span className="whitespace-nowrap">{billingUpdatingId === item.id ? "更新中..." : formatBillingStatus(item.billingStatus)}</span>
+                          <span className="whitespace-nowrap">{billingUpdatingIdSet.has(item.id) ? "更新中..." : formatBillingStatus(item.billingStatus)}</span>
                         </label>
                       </td> : null}
                       {visibleColumns.salesAmount ? <td className="px-4 py-4 text-sm whitespace-nowrap">{formatCurrency(item.salesAmount)}</td> : null}
@@ -1379,6 +1408,45 @@ export function ReportsPageClient({ administrator }: { administrator: Authentica
             </button>
           </div>
         </section>
+
+        {isMonthlyInvoiceDialogOpen ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4 py-6">
+            <div className="w-full max-w-lg rounded-4xl border border-white/70 bg-white p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-(--ink-muted)">Monthly Invoice</p>
+              <h2 className="mt-2 text-2xl font-semibold">{monthlyInvoiceMonthLabel} の出力前確認</h2>
+              <p className="mt-3 text-sm leading-6 text-(--ink-soft)">
+                月次請求書の出力ページへ進む前に、この対象月の日報の請求処理をどう扱うか選択してください。
+              </p>
+
+              <div className="mt-6 grid gap-3">
+                <button
+                  type="button"
+                  onClick={() => void handleMoveToMonthlyInvoicePage(true)}
+                  disabled={isMonthlyInvoiceActionPending}
+                  className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-(--accent-strong) px-5 text-sm font-semibold text-white transition hover:bg-(--accent-deep) disabled:opacity-60"
+                >
+                  {isMonthlyInvoiceActionPending ? "更新中..." : "請求処理を済にする"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleMoveToMonthlyInvoicePage(false)}
+                  disabled={isMonthlyInvoiceActionPending}
+                  className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-black/10 bg-white px-5 text-sm font-medium text-(--ink) transition hover:border-black/20 hover:bg-black/3 disabled:opacity-60"
+                >
+                  請求処理を済にしない
+                </button>
+                <button
+                  type="button"
+                  onClick={closeMonthlyInvoiceDialog}
+                  disabled={isMonthlyInvoiceActionPending}
+                  className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-black/10 bg-[#f8f5f0] px-5 text-sm font-medium text-(--ink-soft) transition hover:border-black/20 hover:bg-[#f3ede6] disabled:opacity-60"
+                >
+                  キャンセル
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </main>
   );
