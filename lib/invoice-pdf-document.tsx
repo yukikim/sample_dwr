@@ -510,6 +510,7 @@ function DocumentPage({
   const clientCode = sanitizePdfText(pageData.group.clientCode);
   const issuerCompanyName = sanitizePdfText(invoiceIssuer.companyName);
   const issuerAddress = sanitizePdfText(invoiceIssuer.address);
+  const invoiceRegistrationNumber = sanitizePdfText(invoiceIssuer.invoiceRegistrationNumber);
   const safeSelectionPeriod = sanitizePdfText(selectionPeriod);
 
   return (
@@ -529,6 +530,7 @@ function DocumentPage({
         <View style={styles.issuerBlock}>
           <Text style={{ ...styles.issuerTitle, color: theme.primary }}>{issuerCompanyName}</Text>
           <Text style={{ ...styles.issuerText, color: theme.primary }}>{issuerAddress}</Text>
+          <Text style={{ ...styles.issuerText, color: theme.primary }}>登録番号 {invoiceRegistrationNumber}</Text>
           {/* <Text style={{ ...styles.issuerText, color: theme.primary }}>振込先 {invoiceIssuer.transferAccount}</Text> */}
         </View>
       </View>
